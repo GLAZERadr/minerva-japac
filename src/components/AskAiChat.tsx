@@ -6,6 +6,13 @@ import {
   type FormEvent,
 } from "react";
 import { apiUrl } from "@/lib/api";
+import {
+  FACTORY_FUNCTIONS,
+  FACTORY_SYSTEM_INSTRUCTION,
+  friendlyGeminiError,
+  isGeminiConfigured,
+  streamChatWithGeminiFunctions,
+} from "@/lib/gemini";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowUp,
@@ -138,12 +145,19 @@ export function useAskAiChat() {
     setIsLoading(true);
     setError(null);
 
+    // Backend fetch must never hang forever — without a timeout a stalled
+    // connection leaves the panel on the loading spinner indefinitely and
+    // the Gemini fallback is never reached.
+    const backendController = new AbortController();
+    const backendTimeoutId = setTimeout(() => backendController.abort(), 20000);
+
     try {
       // Call backend workflow that translates natural language to Flux and analysis answer.
       const response = await fetch(apiUrl("/api/chatbot/query"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
+        signal: backendController.signal,
       });
 
       const payload = await response.json().catch(() => null);
@@ -173,10 +187,66 @@ export function useAskAiChat() {
         },
       ]);
     } catch (err) {
-      const fallbackMessage =
-        err instanceof Error ? err.message : "Terjadi kesalahan tak terduga.";
-      setError(fallbackMessage);
+      // Backend unreachable/timed out — fall back to a direct Google AI
+      // Studio call (gemma-4-31b-it with native factory function calling).
+      // The fallback gets an overall timeout so the panel can never hang.
+      const backendMessage = backendController.signal.aborted
+        ? "backend timeout (20 detik)"
+        : err instanceof Error
+          ? err.message
+          : "backend gagal";
+      if (isGeminiConfigured()) {
+        const fallbackController = new AbortController();
+        const fallbackTimeoutId = setTimeout(
+          () => fallbackController.abort(),
+          120000
+        );
+        try {
+          // Stream the answer token-by-token into a placeholder message.
+          const assistantId = Date.now() + 1;
+          let streamedText = "";
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content: "" },
+          ]);
+          const patchMessage = (content: string) =>
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId ? { ...msg, content } : msg
+              )
+            );
+          for await (const event of streamChatWithGeminiFunctions({
+            prompt: trimmed,
+            systemInstruction: FACTORY_SYSTEM_INSTRUCTION,
+            functions: FACTORY_FUNCTIONS,
+            signal: fallbackController.signal,
+          })) {
+            if (event.type === "delta") {
+              streamedText += event.text;
+              patchMessage(streamedText);
+            } else if (event.type === "status") {
+              // Show tool status only while no answer text arrived yet.
+              if (!streamedText) patchMessage(`_${event.text}_`);
+            } else {
+              patchMessage(
+                event.text ? event.text : "(Tidak ada jawaban)"
+              );
+            }
+          }
+          return;
+        } catch (geminiErr) {
+          const geminiMessage = fallbackController.signal.aborted
+            ? "Gemini timeout (120 detik)"
+            : friendlyGeminiError(geminiErr);
+          setError(`Backend: ${backendMessage}. Gemini: ${geminiMessage}`);
+          return;
+        } finally {
+          clearTimeout(fallbackTimeoutId);
+        }
+      }
+      setError(backendMessage);
     } finally {
+      clearTimeout(backendTimeoutId);
       setIsLoading(false);
     }
   }, []);

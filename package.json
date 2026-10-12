@@ -10,6 +10,7 @@
     "check": "npm run typecheck && npm run build"
   },
   "dependencies": {
+    "@google/genai": "^2.28.0",
     "@heroui/modal": "^2.2.24",
     "@heroui/react": "^2.8.5",
     "@radix-ui/react-dialog": "^1.1.15",
