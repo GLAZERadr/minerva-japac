@@ -36,6 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# firebase — JANGAN ignore firebase.json & .firebaserc (harus di-commit)
+# cache + log hasil deploy wajib di-ignore:
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -45,3 +53,4 @@ next-env.d.ts
 .agents/
 .claude/
 .codegraph
+skills-lock.json
