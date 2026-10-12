@@ -8,7 +8,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 type Props = {
   isOpen: boolean;
@@ -23,21 +22,36 @@ export default function AutonomousStartConfirmModal({
 }: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCloseAction()}>
-      <DialogContent className="sm:max-w-md p-5">
-        <DialogHeader>
-          <DialogTitle>Start Autonomous Mode?</DialogTitle>
-          <DialogDescription>
+      <DialogContent
+        style={{ fontFamily: "Roboto, system-ui, -apple-system, sans-serif" }}
+        className="rounded-[28px] border border-white/10 bg-[#212121] p-6 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)] sm:max-w-md"
+      >
+        <DialogHeader className="space-y-1.5 text-left">
+          <DialogTitle className="text-lg font-medium text-[#e8eaed]">
+            Start Autonomous Mode?
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed text-[#9aa0a6]">
             Apakah anda akan memulai autonomus menggunakan akurasi data saat
             ini?
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter>
-          <div className="flex gap-2 w-full justify-end">
-            <Button variant="ghost" onClick={onCloseAction}>
+        <DialogFooter className="mt-6">
+          <div className="flex w-full justify-end gap-1">
+            <button
+              type="button"
+              onClick={onCloseAction}
+              className="rounded-full px-4 py-2 text-sm font-medium text-[#8ab4f8] transition hover:bg-[rgba(138,180,248,0.12)]"
+            >
               Cancel
-            </Button>
-            <Button onClick={onConfirmAction}>Start Autonomous</Button>
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmAction}
+              className="rounded-full bg-[#8ab4f8] px-5 py-2 text-sm font-medium text-[#062e6f] transition hover:bg-[#aecbfa]"
+            >
+              Start Autonomous
+            </button>
           </div>
         </DialogFooter>
       </DialogContent>

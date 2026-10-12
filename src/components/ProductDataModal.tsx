@@ -100,27 +100,30 @@ export default function ProductDataModal({
         }
       }}
     >
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden border border-slate-800 bg-slate-900 p-0 text-white">
-        <DialogHeader className="border-b border-slate-800 px-6 py-5">
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+      <DialogContent
+        style={{ fontFamily: "Roboto, system-ui, -apple-system, sans-serif" }}
+        className="flex max-h-[90vh] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#212121] p-0 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+      >
+        <DialogHeader className="border-b border-white/10 px-6 py-5">
+          <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]">
             Tambah Data Produk
           </span>
-          <DialogTitle className="text-xl font-semibold text-white">
+          <DialogTitle className="mt-1 text-xl font-medium text-[#e8eaed]">
             Simpan Data Manual ke MySQL
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+          <DialogDescription className="mt-1 text-xs text-[#9aa0a6]">
             Masukkan nomor lot; sistem backend akan melengkapi data produk
             secara otomatis.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+        <div className="google-scroll flex-1 space-y-6 overflow-y-auto px-6 py-6">
           <section className="space-y-3">
             <div className="space-y-2">
               <label
                 htmlFor="lot-number"
-                className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
+                className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]"
               >
-                Nomor Lot<span className="ml-2 text-rose-400">*</span>
+                Nomor Lot<span className="ml-2 text-[#f28b82]">*</span>
               </label>
               <Input
                 id="lot-number"
@@ -128,24 +131,25 @@ export default function ProductDataModal({
                 placeholder="cth. LOT-2025-001"
                 value={lotNumber}
                 onChange={(event) => setLotNumber(event.target.value)}
+                className="border-white/10 bg-[#2b2b2b] text-[#e8eaed] placeholder:text-[#5f6368] focus-visible:ring-[#8ab4f8] focus-visible:ring-offset-[#212121]"
               />
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#9aa0a6]">
               Sistem backend akan mengisi detail mesin, performa, dan metrik
               berdasarkan nomor lot ini.
             </p>
           </section>
 
           {error && (
-            <p className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+            <p className="rounded-2xl border border-[rgba(242,139,130,0.35)] bg-[rgba(242,139,130,0.12)] px-4 py-3 text-sm text-[#f28b82]">
               {error}
             </p>
           )}
         </div>
-        <DialogFooter className="border-t border-slate-800 px-6 py-4">
+        <DialogFooter className="border-t border-white/10 px-6 py-4">
           <Button
             variant="flat"
-            className="bg-slate-800/60 text-slate-200"
+            className="rounded-full bg-white/8 px-5 text-[#e8eaed]"
             onPress={onCloseAction}
             isDisabled={isSubmitting}
           >
@@ -153,7 +157,7 @@ export default function ProductDataModal({
           </Button>
           <Button
             color="primary"
-            className="bg-blue-500 text-white"
+            className="rounded-full bg-[#8ab4f8] px-5 font-medium text-[#062e6f]"
             onPress={handleSubmit}
             isLoading={isSubmitting}
             isDisabled={!canSubmit}

@@ -207,37 +207,40 @@ function SimulationConfiguratorModal() {
         }
       }}
     >
-      <DialogContent className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden border border-slate-800 bg-slate-900 p-0 text-white">
-        <DialogHeader className="border-b border-slate-800 px-6 py-5">
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+      <DialogContent
+        style={{ fontFamily: "Roboto, system-ui, -apple-system, sans-serif" }}
+        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#212121] p-0 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+      >
+        <DialogHeader className="border-b border-white/10 px-6 py-5">
+          <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]">
             Konfigurasi Simulasi
           </span>
-          <DialogTitle className="text-xl font-semibold text-white">
+          <DialogTitle className="mt-1 text-xl font-medium text-[#e8eaed]">
             Pilih Produk & Parameter
           </DialogTitle>
           {selectedProduct && (
-            <DialogDescription className="text-xs text-slate-400">
+            <DialogDescription className="mt-1 text-xs text-[#9aa0a6]">
               {selectedProduct.description}
             </DialogDescription>
           )}
         </DialogHeader>
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+        <div className="google-scroll flex-1 space-y-6 overflow-y-auto px-6 py-6">
           {flowsLoading && productFlows.length === 0 && (
-            <p className="rounded-lg border border-dashed border-slate-700 bg-slate-800/30 p-4 text-sm text-slate-300">
+            <p className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-sm text-[#bdc1c6]">
               Memuat daftar flow produk...
             </p>
           )}
 
           {flowsError && (
-            <p className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-200">
+            <p className="rounded-2xl border border-[rgba(242,139,130,0.35)] bg-[rgba(242,139,130,0.12)] p-4 text-sm text-[#f28b82]">
               {flowsError}
             </p>
           )}
 
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-white">Pilih Produk</h4>
+            <h4 className="text-sm font-medium text-[#e8eaed]">Pilih Produk</h4>
             {productFlows.length === 0 ? (
-              <p className="rounded-lg border border-slate-800 bg-slate-800/40 p-4 text-sm text-slate-400">
+              <p className="rounded-2xl bg-white/5 p-4 text-sm text-[#9aa0a6]">
                 Flow belum tersedia. Gunakan urutan default.
               </p>
             ) : (
@@ -249,16 +252,16 @@ function SimulationConfiguratorModal() {
                       key={product.productId}
                       type="button"
                       onClick={() => setProductId(product.productId)}
-                      className={`rounded-xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+                      className={`rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ab4f8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#212121] ${
                         isActive
-                          ? "border-blue-500 bg-blue-500/10 text-white"
-                          : "border-slate-800 bg-slate-800/40 text-slate-300 hover:border-blue-500/60 hover:text-white"
+                          ? "border-[#8ab4f8] bg-[rgba(138,180,248,0.12)] text-[#e8eaed]"
+                          : "border-white/10 bg-white/5 text-[#bdc1c6] hover:border-[rgba(138,180,248,0.5)] hover:text-[#e8eaed]"
                       }`}
                     >
-                      <p className="text-sm font-semibold">
+                      <p className="text-sm font-medium">
                         {product.productName}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="mt-0.5 text-xs text-[#9aa0a6]">
                         {product.description}
                       </p>
                     </button>
@@ -270,10 +273,10 @@ function SimulationConfiguratorModal() {
 
           <section className="space-y-4">
             <div>
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-sm font-medium text-[#e8eaed]">
                 Informasi Umum
               </h4>
-              <p className="text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-[#9aa0a6]">
                 Data ini menentukan konteks lot dan material simulasi.
               </p>
             </div>
@@ -282,7 +285,7 @@ function SimulationConfiguratorModal() {
                 <div key={field.key} className="space-y-2">
                   <label
                     htmlFor={`general-${field.key}`}
-                    className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
+                    className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]"
                   >
                     {field.label}
                   </label>
@@ -293,6 +296,7 @@ function SimulationConfiguratorModal() {
                     onChange={(event) =>
                       handleGeneralChange(field.key, event.target.value)
                     }
+                    className="border-white/10 bg-[#2b2b2b] text-[#e8eaed] placeholder:text-[#5f6368] focus-visible:ring-[#8ab4f8] focus-visible:ring-offset-[#212121]"
                   />
                 </div>
               ))}
@@ -301,10 +305,10 @@ function SimulationConfiguratorModal() {
 
           <section className="space-y-4">
             <div>
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-sm font-medium text-[#e8eaed]">
                 Parameter Mesin
               </h4>
-              <p className="text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-[#9aa0a6]">
                 Parameter opsional untuk simulasi environment mesin.
               </p>
             </div>
@@ -313,7 +317,7 @@ function SimulationConfiguratorModal() {
                 <div key={field.key} className="space-y-2">
                   <label
                     htmlFor={`parameter-${field.key}`}
-                    className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
+                    className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]"
                   >
                     {field.label}
                   </label>
@@ -324,24 +328,25 @@ function SimulationConfiguratorModal() {
                     onChange={(event) =>
                       handleParameterChange(field.key, event.target.value)
                     }
+                    className="border-white/10 bg-[#2b2b2b] text-[#e8eaed] placeholder:text-[#5f6368] focus-visible:ring-[#8ab4f8] focus-visible:ring-offset-[#212121]"
                   />
                 </div>
               ))}
             </div>
           </section>
         </div>
-        <DialogFooter className="border-t border-slate-800 px-6 py-4">
+        <DialogFooter className="border-t border-white/10 px-6 py-4">
           <Button
             variant="flat"
             color="default"
-            className="bg-slate-800/60 text-slate-300"
+            className="rounded-full bg-white/8 px-5 text-[#e8eaed]"
             onPress={closeConfigurator}
           >
             Batal
           </Button>
           <Button
             color="primary"
-            className="bg-blue-500 text-white"
+            className="rounded-full bg-[#8ab4f8] px-5 font-medium text-[#062e6f]"
             isDisabled={isSubmitDisabled}
             onPress={handleSubmit}
           >

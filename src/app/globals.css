@@ -132,3 +132,31 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Google-dark thin scrollbar — blends with #212121 / #181818 surfaces.
+   Apply via `className="... google-scroll"`. */
+.google-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #5f6368 transparent;
+}
+.google-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.google-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.google-scroll::-webkit-scrollbar-thumb {
+  background: #5f6368;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.google-scroll::-webkit-scrollbar-thumb:hover {
+  background: #80868b;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.google-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}

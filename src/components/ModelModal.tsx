@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Euler, Object3D, Vector3 } from "three";
 import { createRoot, type Root } from "react-dom/client";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -15,38 +14,66 @@ import {
 import type { MachineDetails } from "@/lib/machines";
 import { loadMachineById } from "@/lib/machines";
 
-// --- Fungsi Helper Baru untuk Warna Health Score ---
+// --- Google-dark (Material You) health tones ---
 /**
- * Mendapatkan kelas Tailwind untuk warna UI berdasarkan skor kesehatan.
+ * Health-score colors in the Google dark palette, matching the rest of the
+ * factory shell (#81c995 green, #fdd663 yellow, #f28b82 red).
  * @param health - Skor kesehatan (0-100)
  */
 const getHealthColorClasses = (health: number) => {
   // 20% = Merah
   if (health <= 20) {
     return {
-      bg: "bg-red-500/10",
-      text: "text-red-500",
-      border: "border-red-500/30",
-      badge: "bg-red-500",
+      softBg: "bg-[rgba(242,139,130,0.12)]",
+      text: "text-[#f28b82]",
+      border: "border-[rgba(242,139,130,0.35)]",
+      chip: "bg-[#f28b82] text-[#601410]",
     };
   }
   // 43%, 55% = Kuning
   if (health <= 55) {
     return {
-      bg: "bg-yellow-500/10",
-      text: "text-yellow-500",
-      border: "border-yellow-500/30",
-      badge: "bg-yellow-500",
+      softBg: "bg-[rgba(253,214,99,0.12)]",
+      text: "text-[#fdd663]",
+      border: "border-[rgba(253,214,99,0.35)]",
+      chip: "bg-[#fdd663] text-[#3c2e00]",
     };
   }
   // 68%, 76%, 90% = Hijau
   return {
-    bg: "bg-green-500/10",
-    text: "text-green-500",
-    border: "border-green-500/30",
-    badge: "bg-green-500",
+    softBg: "bg-[rgba(129,201,149,0.12)]",
+    text: "text-[#81c995]",
+    border: "border-[rgba(129,201,149,0.35)]",
+    chip: "bg-[#81c995] text-[#0e3b21]",
   };
 };
+
+// Google-dark status chip (filled tonal pill, Material 3).
+function StatusChip({ trouble }: { trouble: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+        trouble
+          ? "bg-[rgba(242,139,130,0.16)] text-[#f28b82]"
+          : "bg-[rgba(129,201,149,0.16)] text-[#81c995]"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${trouble ? "bg-[#f28b82]" : "bg-[#81c995]"}`}
+      />
+      {trouble ? "Trouble" : "Normal"}
+    </span>
+  );
+}
+
+// Overline label used across Google settings-style rows.
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#9aa0a6]">
+      {children}
+    </p>
+  );
+}
 
 type ModelModalOptions = {
   id: string;
@@ -120,111 +147,112 @@ function ModelModal(props: ModelModalOptions) {
     >
       {/* --- MODIFIKASI: Lebar diubah menjadi 30vw (responsif) --- */}
       <DialogContent
-        className={`max-h-[90vh] w-[92vw] min-w-[320px] overflow-hidden bg-[#0F172A] p-0 text-white transition-[width] duration-200 md:top-1/2 md:translate-x-0! md:-translate-y-1/2 ${
+        style={{ fontFamily: "Roboto, system-ui, -apple-system, sans-serif" }}
+        className={`max-h-[90vh] w-[92vw] min-w-[320px] overflow-hidden border-white/10 bg-[#212121] p-0 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-[width] duration-200 md:top-1/2 md:translate-x-0! md:-translate-y-1/2 ${
           expanded
-            ? "md:w-[64vw] lg:w-[60vw] xl:w-[56vw] md:left-auto! md:right-10! md:rounded-xl md:border md:border-white/10"
-            : "md:w-[28vw] md:left-auto! md:right-6! md:rounded-l-xl md:rounded-r-none md:border-l md:border-white/10"
+            ? "md:w-[64vw] lg:w-[60vw] xl:w-[56vw] md:left-auto! md:right-10! md:rounded-3xl md:border"
+            : "md:w-[28vw] md:left-auto! md:right-6! md:rounded-l-3xl md:rounded-r-none md:border-y md:border-l"
         }`}
       >
         <div className="flex max-h-[90vh] flex-col">
-          <DialogHeader className="flex flex-row items-center justify-between border-b border-white/10 px-6 py-4">
-            <DialogTitle className="text-lg font-semibold text-white">
-              {machine?.title ?? description ?? id}
-            </DialogTitle>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="rounded-md border border-white/10 bg-white/10 text-white hover:bg-white/20"
+          <DialogHeader className="flex flex-row items-center gap-3 border-b border-white/10 px-5 py-4">
+            {/* Google-style avatar with machine initial */}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(138,180,248,0.16)] text-base font-medium text-[#8ab4f8]">
+              {(machine?.title ?? description ?? id)?.charAt(0)?.toUpperCase() ?? "M"}
+            </span>
+            <span className="min-w-0 flex-1">
+              <DialogTitle className="truncate text-base font-medium text-[#e8eaed]">
+                {machine?.title ?? description ?? id}
+              </DialogTitle>
+              <p className="truncate text-xs text-[#9aa0a6]">
+                {[machine?.machineId, machine?.location]
+                  .filter(Boolean)
+                  .join(" · ") || "Machine detail"}
+              </p>
+            </span>
+            <button
+              type="button"
               onClick={() => setExpanded((prev) => !prev)}
+              className="shrink-0 rounded-full bg-[rgba(138,180,248,0.12)] px-4 py-1.5 text-xs font-medium text-[#8ab4f8] transition hover:bg-[rgba(138,180,248,0.2)]"
             >
               {expanded ? "Collapse" : "Expand"}
-            </Button>
+            </button>
           </DialogHeader>
-          <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+          <div className="google-scroll flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {/* --- BAGIAN ATAS (Info & Status) --- */}
             {/* --- MODIFIKASI: Layout grid diubah jadi 1 kolom (tumpuk) --- */}
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
               {/* --- Kolom Kiri (Hanya Info Mesin) --- */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 {/* --- DIHAPUS: Kartu 3D Preview --- */}
 
-                {/* Kartu Machine Info */}
-                <section className="rounded-lg bg-[#1E293B] p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                    <h4 className="text-base font-semibold text-white">
+                {/* Kartu Machine Info — Google settings rows */}
+                <section className="rounded-2xl bg-white/5 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-medium text-[#e8eaed]">
                       {machine?.title ?? description ?? id}
                     </h4>
+                    {typeof machine?.healthScore === "number" && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getHealthColorClasses(machine.healthScore).chip}`}
+                      >
+                        {machine.healthScore}% health
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-xs text-gray-400">Machine ID</p>
-                      <p className="font-medium text-white">
-                        {machine?.machineId ?? "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">PLC</p>
-                      <p className="font-medium text-white">
-                        {machine?.PLC ?? "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">NodeRed</p>
-                      <p className="font-medium text-white">
-                        {machine?.nodeRed ?? "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Date Add</p>
-                      <p className="font-medium text-white">
-                        {machine?.dateAdded ?? "-"}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-400">Location</p>
-                      <p className="font-medium text-white">
-                        {machine?.location ?? "-"}
-                      </p>
-                    </div>
-                  </div>
+                  <dl className="mt-3 divide-y divide-white/5">
+                    {[
+                      ["Machine ID", machine?.machineId ?? "-"],
+                      ["PLC", machine?.PLC ?? "-"],
+                      ["Node-RED", machine?.nodeRed ?? "-"],
+                      ["Date added", machine?.dateAdded ?? "-"],
+                      ["Location", machine?.location ?? "-"],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="flex items-baseline justify-between gap-4 py-2.5"
+                      >
+                        <dt>
+                          <FieldLabel>{label}</FieldLabel>
+                        </dt>
+                        <dd className="truncate text-sm text-[#e8eaed]">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 </section>
               </div>
 
               {/* --- Kolom Kanan (Indicators & Alarms) --- */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 {/* Kartu Indicators */}
-                <section className="rounded-lg bg-[#1E293B] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                      <h4 className="text-base font-semibold text-white">
-                        {machine?.title ?? "Indicators"}
-                      </h4>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="rounded-full border-none bg-red-600 text-white hover:bg-red-500"
-                    >
-                      Trouble
-                    </Button>
+                <section className="rounded-2xl bg-white/5 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-medium text-[#e8eaed]">
+                      Live indicators
+                    </h4>
+                    <StatusChip
+                      trouble={(machine?.alarms?.active ?? 0) > 0}
+                    />
                   </div>
-                  <div className="mt-4 grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
                     {machine?.indicators ? (
                       Object.entries(machine.indicators).map(([key, value]) => (
-                        <div key={key} className="rounded-lg bg-[#0F172A] p-3">
-                          <p className="flex items-center gap-2 text-xs text-gray-400">
-                            <span className="h-2 w-2 rounded-full bg-green-500" />
+                        <div
+                          key={key}
+                          className="rounded-2xl bg-[#2b2b2b] p-4"
+                        >
+                          <p className="truncate text-xs text-[#9aa0a6]">
                             {key}
                           </p>
-                          <p className="mt-1 text-lg font-semibold text-white">
+                          <p className="mt-1 text-[22px] font-medium leading-7 text-[#e8eaed]">
                             {value ?? "-"}
                           </p>
                         </div>
                       ))
                     ) : (
-                      <p className="col-span-3 text-gray-400">
+                      <p className="col-span-3 text-sm text-[#9aa0a6]">
                         No indicator data.
                       </p>
                     )}
@@ -232,50 +260,66 @@ function ModelModal(props: ModelModalOptions) {
                 </section>
 
                 {/* Kartu Alarms */}
-                <section className="rounded-lg bg-[#1E293B] p-4">
+                <section className="rounded-2xl bg-white/5 p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-3 w-3 shrink-0 rounded-full bg-red-500" />
-                      <h4 className="text-base font-semibold text-white">
-                        Homogenizing Alarms
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-[#f28b82]" />
+                      <h4 className="text-sm font-medium text-[#e8eaed]">
+                        {(machine?.title ?? "Machine") + " alarms"}
                       </h4>
-                      <span className="text-sm text-red-500">
-                        {machine?.alarms?.active ?? 0} Active
+                      <span className="text-xs text-[#f28b82]">
+                        {machine?.alarms?.active ?? 0} active
                       </span>
-                      <span className="text-sm text-gray-400">
+                      <span className="text-xs text-[#9aa0a6]">
                         ({machine?.alarms?.total ?? 0} total)
                       </span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-xs text-gray-500">
-                        Last update: 10:42:19 PM
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] text-[#9aa0a6]">
+                        Updated {new Date().toLocaleTimeString()}
                       </span>
-                      <Button size="sm" className="rounded-md">
-                        Show All
-                      </Button>
+                      <button
+                        type="button"
+                        className="rounded-full px-3 py-1.5 text-xs font-medium text-[#8ab4f8] transition hover:bg-[rgba(138,180,248,0.12)]"
+                      >
+                        Show all
+                      </button>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-1">
                     {machine?.alarms?.list && machine.alarms.list.length > 0 ? (
-                      machine.alarms.list.slice(0, 5).map((alarm, index) => (
-                        <div
-                          key={alarm}
-                          className="flex items-center gap-3 rounded-lg bg-[#0F172A] p-3"
-                        >
-                          <span
-                            className={`h-3 w-3 rounded-full ${
-                              index < (machine?.alarms?.active ?? 0)
-                                ? "bg-green-500"
-                                : "bg-gray-500"
-                            }`}
-                          />
-                          <p className="text-sm font-medium text-white">
-                            {alarm}
-                          </p>
-                        </div>
-                      ))
+                      machine.alarms.list.slice(0, 5).map((alarm, index) => {
+                        const isActive =
+                          index < (machine?.alarms?.active ?? 0);
+                        return (
+                          <div
+                            key={alarm}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-white/5"
+                          >
+                            <span
+                              className={`h-2 w-2 shrink-0 rounded-full ${
+                                isActive ? "bg-[#81c995]" : "bg-[#5f6368]"
+                              }`}
+                            />
+                            <p className="flex-1 truncate text-sm text-[#e8eaed]">
+                              {alarm}
+                            </p>
+                            <span
+                              className={`text-[11px] ${
+                                isActive
+                                  ? "text-[#81c995]"
+                                  : "text-[#9aa0a6]"
+                              }`}
+                            >
+                              {isActive ? "Active" : "Cleared"}
+                            </span>
+                          </div>
+                        );
+                      })
                     ) : (
-                      <p className="text-gray-400">No alarms registered.</p>
+                      <p className="text-sm text-[#9aa0a6]">
+                        No alarms registered.
+                      </p>
                     )}
                   </div>
                 </section>
@@ -283,17 +327,17 @@ function ModelModal(props: ModelModalOptions) {
             </div>
 
             {/* --- BAGIAN PREDICTIVE MAINTENANCE --- */}
-            <section className="rounded-lg bg-[#1E293B] p-4">
+            <section className="rounded-2xl bg-white/5 p-5">
               {/* HEADER SECTION 
     - flex-wrap: Memastikan item kanan (badge/button) bisa turun 
       ke bawah judul di layar yang sangat sempit.
   */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-base font-semibold text-white">
-                    Predictive Maintenance
+                  <h4 className="text-sm font-medium text-[#e8eaed]">
+                    Predictive maintenance
                   </h4>
-                  <p className="text-sm text-gray-400">
+                  <p className="mt-0.5 text-xs text-[#9aa0a6]">
                     {machine?.title ?? id}
                     {maintenanceCount ? (
                       <span className="ml-2">({maintenanceCount} total)</span>
@@ -306,22 +350,22 @@ function ModelModal(props: ModelModalOptions) {
       - justify-end: Memastikan item tetap di kanan saat wrapping.
       - gap-2 sm:gap-4: Mengurangi spasi di layar kecil.
     */}
-                <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+                <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                   {typeof machine?.healthScore === "number" && (
                     <span
-                      className={`inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold ${
-                        getHealthColorClasses(machine.healthScore).badge
-                      } bg-opacity-80 text-white`}
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                        getHealthColorClasses(machine.healthScore).chip
+                      }`}
                     >
-                      {machine.healthScore}%
-                      <span className="ml-2 font-normal opacity-80">
-                        Health Score
-                      </span>
+                      {machine.healthScore}% health
                     </span>
                   )}
-                  <Button size="sm" className="rounded-md">
-                    Show All
-                  </Button>
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1.5 text-xs font-medium text-[#8ab4f8] transition hover:bg-[rgba(138,180,248,0.12)]"
+                  >
+                    Show all
+                  </button>
                 </div>
               </div>
 
@@ -334,7 +378,7 @@ function ModelModal(props: ModelModalOptions) {
         dan jika ada sisa ruang, bagi rata (1fr).
       - Ini jauh lebih robust daripada breakpoint tetap.
     */
-                <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
+                <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3">
                   {maintenanceItems.map((item) => {
                     const healthColors = getHealthColorClasses(item.health);
                     // Prefer item.thumbnail, fallback to machine.previewImage when available
@@ -343,7 +387,7 @@ function ModelModal(props: ModelModalOptions) {
                     return (
                       <article
                         key={item.part}
-                        className={`flex flex-col justify-between rounded-lg bg-[#0F172A] p-4 border ${healthColors.border} ${healthColors.bg}`}
+                        className={`flex flex-col justify-between rounded-2xl border bg-[#2b2b2b] p-4 ${healthColors.border}`}
                       >
                         <div>
                           <div className="flex items-start gap-4">
@@ -352,7 +396,7 @@ function ModelModal(props: ModelModalOptions) {
                                 src={thumbSrc}
                                 alt={`${item.part} thumbnail`}
                                 // shrink-0 mencegah gambar penyet saat teks panjang
-                                className="h-20 w-20 shrink-0 rounded-lg bg-white/5 p-1 object-contain"
+                                className="h-20 w-20 shrink-0 rounded-2xl bg-white/5 p-1 object-contain"
                                 loading="lazy"
                                 // fallback to a small inline SVG so user doesn't see the broken image icon
                                 onError={(e) => {
@@ -364,7 +408,7 @@ function ModelModal(props: ModelModalOptions) {
                                 }}
                               />
                             ) : (
-                              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-white/5 text-center text-[11px] text-gray-400">
+                              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-center text-[11px] text-[#9aa0a6]">
                                 No image
                               </div>
                             )}
@@ -374,13 +418,13 @@ function ModelModal(props: ModelModalOptions) {
                       (tanpa spasi) untuk pindah baris agar tidak 
                       merusak layout kartu.
                   */}
-                              <p className="text-base font-semibold text-white wrap-break-word">
+                              <p className="text-sm font-medium text-[#e8eaed] wrap-break-word">
                                 {item.part}
                               </p>
-                              <p className="text-xs text-gray-400">
+                              <p className="text-xs text-[#9aa0a6]">
                                 Predictive: {item.predictive || "-"}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-[#9aa0a6]">
                                 Last: {item.last || "-"}
                               </p>
                             </div>
@@ -392,16 +436,16 @@ function ModelModal(props: ModelModalOptions) {
               - gap-2: Memberi jarak aman saat wrapping.
             */}
                         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                          <Button size="sm" className="rounded-md">
-                            Detail
-                          </Button>
-                          <span
-                            className={`rounded-md px-3 py-1 text-sm font-semibold ${healthColors.badge} bg-opacity-80 text-white`}
+                          <button
+                            type="button"
+                            className="rounded-full px-3 py-1.5 text-xs font-medium text-[#8ab4f8] transition hover:bg-[rgba(138,180,248,0.12)]"
                           >
-                            {item.health}%
-                            <span className="ml-1.5 font-normal opacity-80">
-                              Health Score
-                            </span>
+                            Detail
+                          </button>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${healthColors.chip}`}
+                          >
+                            {item.health}% health
                           </span>
                         </div>
                       </article>
@@ -409,56 +453,61 @@ function ModelModal(props: ModelModalOptions) {
                   })}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-gray-400">
+                <p className="mt-4 text-sm text-[#9aa0a6]">
                   No predictive maintenance records available.
                 </p>
               )}
             </section>
 
             {/* --- BAGIAN PRESCRIPTIVE ANALYSIS --- */}
-            <section className="rounded-lg bg-[#1E293B] p-4">
-              <h4 className="text-base font-semibold text-white">
-                Prescriptive Analysis
+            <section className="rounded-2xl bg-white/5 p-5">
+              <h4 className="text-sm font-medium text-[#e8eaed]">
+                Prescriptive analysis
               </h4>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {/* What Happened */}
-                <article className="rounded-lg bg-[#0F172A] p-4">
-                  <h5 className="flex items-center gap-2 text-sm font-semibold text-white">
-                    <span className="h-3 w-3 rounded-full bg-red-500" />
-                    What Happened?
+                <article className="rounded-2xl bg-[#2b2b2b] p-4">
+                  <h5 className="flex items-center gap-2 text-[13px] font-medium text-[#e8eaed]">
+                    <span className="h-2 w-2 rounded-full bg-[#f28b82]" />
+                    What happened?
                   </h5>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-300">
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#bdc1c6]">
                     {prescriptive?.whatHappened ?? "-"}
                   </p>
                 </article>
 
                 {/* Why / How It Happened */}
-                <article className="rounded-lg bg-[#0F172A] p-4">
-                  <h5 className="flex items-center gap-2 text-sm font-semibold text-white">
-                    <span className="h-3 w-3 rounded-full bg-red-500" />
-                    Why / How It Happened?
+                <article className="rounded-2xl bg-[#2b2b2b] p-4">
+                  <h5 className="flex items-center gap-2 text-[13px] font-medium text-[#e8eaed]">
+                    <span className="h-2 w-2 rounded-full bg-[#fdd663]" />
+                    Why / how it happened?
                   </h5>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-300">
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#bdc1c6]">
                     {prescriptive?.why ?? "-"}
                   </p>
                 </article>
               </div>
 
               {/* Recommended Action */}
-              <article className="mt-4 rounded-lg bg-[#0F172A] p-4">
-                <h5 className="text-sm font-semibold text-white">
-                  Recommended Action
+              <article className="mt-3 rounded-2xl bg-[rgba(138,180,248,0.08)] p-4">
+                <h5 className="text-[13px] font-medium text-[#8ab4f8]">
+                  Recommended action
                 </h5>
-                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-300">
+                <p className="mt-2.5 whitespace-pre-line text-sm leading-relaxed text-[#e8eaed]">
                   {prescriptive?.recommendedAction ?? "-"}
                 </p>
               </article>
             </section>
           </div>
-          <DialogFooter className="border-t border-white/10 px-6 py-4">
+          <DialogFooter className="border-t border-white/10 px-5 py-4">
             <DialogClose asChild>
-              <Button className="rounded-md">Close</Button>
+              <button
+                type="button"
+                className="rounded-full bg-[#8ab4f8] px-5 py-2 text-sm font-medium text-[#062e6f] transition hover:bg-[#aecbfa]"
+              >
+                Close
+              </button>
             </DialogClose>
           </DialogFooter>
         </div>

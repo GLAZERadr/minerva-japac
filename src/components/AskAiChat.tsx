@@ -316,7 +316,7 @@ export function AskAiChatPanel({
       <div className="mx-6 h-px bg-white/5" />
 
       {/* Riwayat chat */}
-      <div className="min-h-[120px] flex-1 space-y-5 overflow-y-auto px-5 py-4">
+      <div className="google-scroll min-h-[120px] flex-1 space-y-5 overflow-y-auto px-5 py-4">
         {messages.length === 0 && !isLoading && (
           <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm leading-relaxed text-neutral-300">
             Ajukan pertanyaan tentang performa mesin. Sistem akan menyusun
