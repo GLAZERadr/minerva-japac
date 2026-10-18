@@ -54,3 +54,5 @@ next-env.d.ts
 .claude/
 .codegraph
 skills-lock.json
+# build stamp (scripts/write-version.mjs)
+/public/version.json

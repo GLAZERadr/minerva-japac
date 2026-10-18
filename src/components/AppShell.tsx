@@ -8,6 +8,7 @@ import {
 import BottomBar from "@/components/bottom-bar";
 import SimulationConfiguratorModal from "@/components/simulation/SimulationConfiguratorModal";
 import TopBar from "@/components/top-bar";
+import UpdateBanner from "@/components/UpdateBanner";
 import { HeroUIProvider } from "@heroui/react";
 import { usePathname } from "next/navigation";
 
@@ -50,6 +51,7 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
           {!hideChrome && <BottomBar />}
           <SimulationConfiguratorModal />
+          <UpdateBanner />
         </div>
       </SimulationProvider>
     </HeroUIProvider>

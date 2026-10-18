@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Box,
-  Building2,
   Database,
   PackagePlus,
   PanelLeft,
@@ -190,39 +188,6 @@ export default function FactoryLeftRail({
           </div>
         )}
 
-        <div className="border-t border-[#333333] py-3">
-          {expanded ? (
-            <div className="px-3">
-              <Link
-                href="/compro"
-                title="Company Profile"
-                aria-label="Company Profile"
-                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-[#2a2a2a]"
-              >
-                <span className="text-[#acacbe]">
-                  <Building2 className="h-5 w-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm text-[#e8eaed]">Company Profile</span>
-                  <span className="block truncate text-xs text-[#9aa0a6]">
-                    About Minerva
-                  </span>
-                </span>
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1.5">
-              <Link
-                href="/compro"
-                title="Company Profile"
-                aria-label="Company Profile"
-                className="flex h-10 w-10 items-center justify-center rounded-md text-[#acacbe] transition-all hover:bg-[rgba(232,234,237,0.08)] hover:text-[#e8eaed]"
-              >
-                <Building2 className="h-5 w-5" />
-              </Link>
-            </div>
-          )}
-        </div>
       </aside>
       <ProductDataViewerModal isOpen={productOpen} onCloseAction={() => setProductOpen(false)} />
       <ProductDataModal

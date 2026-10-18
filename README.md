@@ -190,6 +190,14 @@ This runs the typecheck and build, then uploads `out/` with
 larger 3D models (up to 15 MB) from timing out on slower connections. Stop
 `npm run dev` before building, since both write to `.next/`.
 
+**Always the latest version, no cache clearing.** HTML, `env.js` and
+`version.json` are served `no-cache`/`no-store`, so a normal reload fetches
+the newest release. Every build also stamps a unique id
+([`scripts/write-version.mjs`](scripts/write-version.mjs)). Open tabs check
+`/version.json` every minute and on focus, and show a **"A new version of
+MINERVA is available · Reload"** banner when a newer deploy is live
+([`src/components/UpdateBanner.tsx`](src/components/UpdateBanner.tsx)).
+
 After the first deploy, add `minerva-apac.web.app` (and
 `minerva-apac.firebaseapp.com`) to the Gemini key's allowed HTTP referrers in
 Google AI Studio.
@@ -232,7 +240,7 @@ gcloud run deploy minerva --source . --region asia-southeast2 --project minerva-
 Dockerfile                Optional Cloud Run image (static build + nginx)
 docker/                   nginx config template, env.js writer
 src/
-  app/                    Routes: / (dashboard), /compro, /twin, /geogemma
+  app/                    Routes: / (dashboard), /compro (redirect), /twin, /geogemma
   components/
     factory-shell/        Dashboard chrome: top bar, rails, mobile tab bar, prompt bar
     simulation/           Simulation provider, scene, configurator and report
@@ -259,7 +267,7 @@ firestore.rules
 | Route | Purpose |
 | --- | --- |
 | `/` | Factory dashboard. |
-| `/compro` | Company profile. |
+| `/compro` | Company profile. Disabled for the demo build: redirects to `/`. Re-enable by rendering [`src/components/compro/CompanyProfile.tsx`](src/components/compro/CompanyProfile.tsx) from `src/app/compro/page.tsx`. |
 | `/twin` | Previous dashboard layout, kept as a fallback. |
 | `/geogemma` | Earth-observation demo (mock data). |
 
