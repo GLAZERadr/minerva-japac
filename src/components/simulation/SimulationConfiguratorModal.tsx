@@ -27,28 +27,28 @@ type FieldDescriptor<Key extends string> = {
 };
 
 const generalFieldDescriptors: FieldDescriptor<GeneralFieldKey>[] = [
-  { key: "lot", label: "Lot", placeholder: "cth. LOT-6061" },
-  { key: "derivative", label: "Derivative", placeholder: "cth. Round" },
-  { key: "diameter", label: "Diameter", placeholder: "cth. 6 inch" },
-  { key: "moltenState", label: "Molten State", placeholder: "cth. Liquid" },
+  { key: "lot", label: "Lot", placeholder: "e.g. LOT-6061" },
+  { key: "derivative", label: "Derivative", placeholder: "e.g. Round" },
+  { key: "diameter", label: "Diameter", placeholder: "e.g. 6 inch" },
+  { key: "moltenState", label: "Molten State", placeholder: "e.g. Liquid" },
   {
     key: "materialMix",
     label: "Material Mix",
-    placeholder: "cth. Primary Ingot",
+    placeholder: "e.g. Primary Ingot",
   },
-  { key: "series", label: "Series", placeholder: "cth. 6000" },
+  { key: "series", label: "Series", placeholder: "e.g. 6000" },
 ];
 
 const parameterFieldDescriptors: FieldDescriptor<ParameterFieldKey>[] = [
-  { key: "temperature", label: "Temperature", placeholder: "cth. 730°C" },
-  { key: "altitude", label: "Altitude", placeholder: "cth. 25 m" },
-  { key: "castingSpeed", label: "Casting Speed", placeholder: "cth. 15 m/min" },
+  { key: "temperature", label: "Temperature", placeholder: "e.g. 730°C" },
+  { key: "altitude", label: "Altitude", placeholder: "e.g. 25 m" },
+  { key: "castingSpeed", label: "Casting Speed", placeholder: "e.g. 15 m/min" },
   {
     key: "argonPressure",
     label: "Argon Pressure",
-    placeholder: "cth. 2.5 bar",
+    placeholder: "e.g. 2.5 bar",
   },
-  { key: "waterPump", label: "Water Pump", placeholder: "cth. 80%" },
+  { key: "waterPump", label: "Water Pump", placeholder: "e.g. 80%" },
 ];
 
 const createEmptyForm = (): SimulationConfiguratorFormValues => ({
@@ -68,6 +68,15 @@ const createEmptyForm = (): SimulationConfiguratorFormValues => ({
     waterPump: "",
   },
 });
+
+// Prefilled so a demo run produces a meaningful before/after report.
+const DEFAULT_PARAMETERS: Record<ParameterFieldKey, string> = {
+  temperature: "730 °C",
+  altitude: "25 m",
+  castingSpeed: "14 m/min",
+  argonPressure: "2.5 bar",
+  waterPump: "80%",
+};
 
 const readDefaultValue = (
   config: ProductFlowDefinition["defaultConfig"],
@@ -128,7 +137,7 @@ function SimulationConfiguratorModal() {
         parameters[field.key] =
           typeof baselineValue === "string" && baselineValue.length > 0
             ? baselineValue
-            : readDefaultValue(defaults, field.key);
+            : readDefaultValue(defaults, field.key) || DEFAULT_PARAMETERS[field.key];
       });
 
       return {
@@ -209,14 +218,14 @@ function SimulationConfiguratorModal() {
     >
       <DialogContent
         style={{ fontFamily: "Roboto, system-ui, -apple-system, sans-serif" }}
-        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#212121] p-0 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+        className="flex max-h-[min(90dvh,900px)] w-[calc(100vw-1.5rem)] max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#212121] p-0 text-[#e8eaed] shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
       >
-        <DialogHeader className="border-b border-white/10 px-6 py-5">
+        <DialogHeader className="shrink-0 border-b border-white/10 px-5 py-4 sm:px-6 sm:py-5">
           <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#9aa0a6]">
-            Konfigurasi Simulasi
+            Simulation setup
           </span>
           <DialogTitle className="mt-1 text-xl font-medium text-[#e8eaed]">
-            Pilih Produk & Parameter
+            Choose product & parameters
           </DialogTitle>
           {selectedProduct && (
             <DialogDescription className="mt-1 text-xs text-[#9aa0a6]">
@@ -224,10 +233,10 @@ function SimulationConfiguratorModal() {
             </DialogDescription>
           )}
         </DialogHeader>
-        <div className="google-scroll flex-1 space-y-6 overflow-y-auto px-6 py-6">
+        <div className="google-scroll min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
           {flowsLoading && productFlows.length === 0 && (
             <p className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-sm text-[#bdc1c6]">
-              Memuat daftar flow produk...
+              Loading product flows…
             </p>
           )}
 
@@ -238,10 +247,10 @@ function SimulationConfiguratorModal() {
           )}
 
           <section className="space-y-3">
-            <h4 className="text-sm font-medium text-[#e8eaed]">Pilih Produk</h4>
+            <h4 className="text-sm font-medium text-[#e8eaed]">Product</h4>
             {productFlows.length === 0 ? (
               <p className="rounded-2xl bg-white/5 p-4 text-sm text-[#9aa0a6]">
-                Flow belum tersedia. Gunakan urutan default.
+                No product flows available. The default sequence will be used.
               </p>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
@@ -274,10 +283,10 @@ function SimulationConfiguratorModal() {
           <section className="space-y-4">
             <div>
               <h4 className="text-sm font-medium text-[#e8eaed]">
-                Informasi Umum
+                General information
               </h4>
               <p className="mt-0.5 text-xs text-[#9aa0a6]">
-                Data ini menentukan konteks lot dan material simulasi.
+                Lot and material context for the simulation.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -306,10 +315,10 @@ function SimulationConfiguratorModal() {
           <section className="space-y-4">
             <div>
               <h4 className="text-sm font-medium text-[#e8eaed]">
-                Parameter Mesin
+                Machine parameters
               </h4>
               <p className="mt-0.5 text-xs text-[#9aa0a6]">
-                Parameter opsional untuk simulasi environment mesin.
+                Process settings to test against current practice.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -335,14 +344,14 @@ function SimulationConfiguratorModal() {
             </div>
           </section>
         </div>
-        <DialogFooter className="border-t border-white/10 px-6 py-4">
+        <DialogFooter className="shrink-0 border-t border-white/10 px-5 py-3 sm:px-6 sm:py-4">
           <Button
             variant="flat"
             color="default"
             className="rounded-full bg-white/8 px-5 text-[#e8eaed]"
             onPress={closeConfigurator}
           >
-            Batal
+            Cancel
           </Button>
           <Button
             color="primary"
@@ -350,7 +359,7 @@ function SimulationConfiguratorModal() {
             isDisabled={isSubmitDisabled}
             onPress={handleSubmit}
           >
-            Mulai Simulasi
+            Start simulation
           </Button>
         </DialogFooter>
       </DialogContent>

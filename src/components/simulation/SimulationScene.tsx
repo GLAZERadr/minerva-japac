@@ -43,7 +43,12 @@ function prepareSteps(steps: SimulationStep[]): SimulationStep[] {
   }));
 }
 
-export default function SimulationScene() {
+export default function SimulationScene({
+  embedded = false,
+}: {
+  /** Inside the factory shell viewport (fills its parent, no 100vh floor). */
+  embedded?: boolean;
+} = {}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const objectsRef = useRef(new Map<string, LoadedObject>());
   const rafRef = useRef<number | null>(null);
@@ -497,13 +502,14 @@ export default function SimulationScene() {
       <div
         ref={containerRef}
         className="absolute inset-0"
-        style={{ minHeight: "100vh", width: "100%" }}
+        style={embedded ? { width: "100%", height: "100%" } : { minHeight: "100vh", width: "100%" }}
       />
       <MachineStreamTooltips
         camera={cameraRef.current}
         machineObjects={objectsRef.current}
         containerWidth={containerSize.width}
         containerHeight={containerSize.height}
+        containerEl={containerRef.current}
         showAll={isAutonomousMode}
       />
     </>

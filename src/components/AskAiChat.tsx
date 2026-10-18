@@ -5,7 +5,16 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import ReactMarkdown from "react-markdown";
 import { apiUrl } from "@/lib/api";
+import {
+  DATA_MODE,
+  canUseMockFallback,
+  checkBackend,
+  fetchWithTimeout,
+  markBackendOffline,
+} from "@/lib/backend";
+import { SUGGESTED_QUESTIONS, answerFromDemoData } from "@/lib/demo-answers";
 import {
   FACTORY_FUNCTIONS,
   FACTORY_SYSTEM_INSTRUCTION,
@@ -23,98 +32,16 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-// Minimal, safe markdown -> HTML renderer for chatbot answers.
-// Supports headings, bold, italic, inline code, code blocks, lists and links.
-function escapeHtml(str: string) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+const MARKDOWN_CLASSES = [
+  "max-w-full text-[15px] leading-relaxed text-neutral-200 [overflow-wrap:anywhere]",
+  "[&_p]:mt-2 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-white",
+  "[&_ul]:mt-2 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5 [&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:pl-5",
+  "[&_h1]:mt-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:font-semibold",
+  "[&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:text-xs [&_pre]:mt-2 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:bg-black/50 [&_pre]:p-3",
+  "[&_a]:text-blue-300 [&_a]:underline",
+].join(" ");
 
-export function renderMarkdownToHtml(md: string | null) {
-  if (!md) return "";
-  // Normalize line endings
-  let text = md.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
-  // Escape first to avoid HTML injection
-  text = escapeHtml(text);
-
-  // Code blocks: ```lang\n...``` --> <pre><code>...</code></pre>
-  text = text.replace(/```([\s\S]*?)```/g, (_m, code) => {
-    return `<pre class="rounded-md bg-slate-950/80 p-3 overflow-auto"><code>${code
-      .replace(/&lt;/g, "&lt;")
-      .replace(/&gt;/g, "&gt;")}</code></pre>`;
-  });
-
-  // Inline code: `code`
-  text = text.replace(/`([^`]+)`/g, (_m, code) => {
-    return `<code class="rounded px-1 bg-slate-800/60 text-xs">${code}</code>`;
-  });
-
-  // Headings: #### to <h4>
-  text = text.replace(
-    /^###### (.*)$/gm,
-    '<h6 class="text-sm font-semibold">$1</h6>'
-  );
-  text = text.replace(
-    /^##### (.*)$/gm,
-    '<h5 class="text-base font-semibold">$1</h5>'
-  );
-  text = text.replace(
-    /^#### (.*)$/gm,
-    '<h4 class="text-lg font-semibold">$1</h4>'
-  );
-  text = text.replace(
-    /^### (.*)$/gm,
-    '<h3 class="text-lg font-semibold">$1</h3>'
-  );
-  text = text.replace(
-    /^## (.*)$/gm,
-    '<h2 class="text-lg font-semibold">$1</h2>'
-  );
-  text = text.replace(/^# (.*)$/gm, '<h1 class="text-xl font-semibold">$1</h1>');
-
-  // Bold **text** and __text__
-  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  text = text.replace(/__(.*?)__/g, "<strong>$1</strong>");
-
-  // Italic *text* or _text_
-  text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  text = text.replace(/_(.*?)_/g, "<em>$1</em>");
-
-  // Links [text](url)
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label, url) => {
-    const safeUrl = url.replace(/"/g, "%22");
-    return `<a class=\"text-blue-300 underline\" href=\"${safeUrl}\" target=\"_blank\" rel=\"noreferrer\">${label}</a>`;
-  });
-
-  // Unordered lists: lines starting with - or *
-  // Convert consecutive list lines into a single <ul>
-  text = text.replace(/(^|\n)(?:[ \t]*[-\*] .+(?:\n|$))+?/g, (block) => {
-    const items = block
-      .trim()
-      .split(/\n/)
-      .map((l) => l.replace(/^[ \t]*[-\*] /, ""))
-      .map((li) => `<li class=\"ml-4 list-disc\">${li}</li>`)
-      .join("");
-    return `\n<ul class=\"mt-2\">${items}</ul>\n`;
-  });
-
-  // Paragraphs: separate by double newlines
-  const parts = text.split(/\n{2,}/).map((p) => p.trim());
-  const html = parts
-    .map((p) => {
-      if (p.startsWith("<h") || p.startsWith("<ul") || p.startsWith("<pre"))
-        return p;
-      return `<p class=\"mt-2\">${p.replace(/\n/g, "<br />")}</p>`;
-    })
-    .join("\n");
-
-  return html;
-}
+export type ChatSource = "live" | "gemma" | "demo";
 
 export type ChatMsg = {
   id: number;
@@ -122,136 +49,152 @@ export type ChatMsg = {
   content: string;
   fluxQuery?: string | null;
   rawData?: string | null;
+  source?: ChatSource;
+};
+
+const BACKEND_TIMEOUT_MS = 8000;
+const GEMMA_TIMEOUT_MS = 15000;
+
+const SOURCE_LABEL: Record<ChatSource, string> = {
+  live: "Live data · InfluxDB",
+  gemma: "Gemma 4",
+  demo: "Demo data",
 };
 
 export function useAskAiChat() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setMessages([]);
     setError(null);
     setIsLoading(false);
+    setLastQuestion(null);
   }, []);
 
-  const ask = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now(), role: "user", content: trimmed },
-    ]);
+  const run = useCallback(async (trimmed: string) => {
     setIsLoading(true);
     setError(null);
-
-    // Backend fetch must never hang forever — without a timeout a stalled
-    // connection leaves the panel on the loading spinner indefinitely and
-    // the Gemini fallback is never reached.
-    const backendController = new AbortController();
-    const backendTimeoutId = setTimeout(() => backendController.abort(), 20000);
+    setLastQuestion(trimmed);
+    let nextId = Date.now() + 1;
+    const pushAssistant = (content: string, source: ChatSource, extra: Partial<ChatMsg> = {}) => {
+      const id = nextId++;
+      setMessages((prev) => [...prev, { id, role: "assistant", content, source, ...extra }]);
+      return id;
+    };
+    const failures: string[] = [];
 
     try {
-      // Call backend workflow that translates natural language to Flux and analysis answer.
-      const response = await fetch(apiUrl("/api/chatbot/query"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed }),
-        signal: backendController.signal,
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const message =
-          typeof payload?.error === "string"
-            ? payload.error
-            : "Gagal memproses permintaan.";
-        throw new Error(message);
+      // 1) Backend workflow: natural language → Flux query → analysed answer.
+      if (DATA_MODE !== "mock" && (await checkBackend()) === "online") {
+        try {
+          const response = await fetchWithTimeout(
+            apiUrl("/api/chatbot/query"),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question: trimmed }),
+            },
+            BACKEND_TIMEOUT_MS
+          );
+          const payload = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(
+              typeof payload?.error === "string" ? payload.error : "The backend could not process the question."
+            );
+          }
+          const answerText = typeof payload?.answer === "string" ? payload.answer.trim() : "";
+          const flux = typeof payload?.fluxQuery === "string" ? payload.fluxQuery.trim() : "";
+          const dataText = typeof payload?.data === "string" ? payload.data.trim() : "";
+          pushAssistant(answerText || "(No answer)", "live", {
+            fluxQuery: flux || null,
+            rawData: dataText || null,
+          });
+          return;
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            failures.push(`backend timed out (${BACKEND_TIMEOUT_MS / 1000} s)`);
+          } else {
+            failures.push(err instanceof Error ? err.message : "backend failed");
+          }
+          markBackendOffline();
+        }
+      } else if (DATA_MODE !== "mock") {
+        failures.push("backend offline");
       }
 
-      const answerText =
-        typeof payload?.answer === "string" ? payload.answer.trim() : "";
-      const flux =
-        typeof payload?.fluxQuery === "string" ? payload.fluxQuery.trim() : "";
-      const dataText =
-        typeof payload?.data === "string" ? payload.data.trim() : "";
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          role: "assistant",
-          content: answerText ? answerText : "(Tidak ada jawaban)",
-          fluxQuery: flux ? flux : null,
-          rawData: dataText ? dataText : null,
-        },
-      ]);
-    } catch (err) {
-      // Backend unreachable/timed out — fall back to a direct Google AI
-      // Studio call (gemma-4-31b-it with native factory function calling).
-      // The fallback gets an overall timeout so the panel can never hang.
-      const backendMessage = backendController.signal.aborted
-        ? "backend timeout (20 detik)"
-        : err instanceof Error
-          ? err.message
-          : "backend gagal";
+      // 2) Gemma 4 via Google AI Studio, with native factory function calling.
       if (isGeminiConfigured()) {
-        const fallbackController = new AbortController();
-        const fallbackTimeoutId = setTimeout(
-          () => fallbackController.abort(),
-          120000
-        );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), GEMMA_TIMEOUT_MS);
+        const assistantId = pushAssistant("", "gemma");
+        const patch = (content: string) =>
+          setMessages((prev) => prev.map((msg) => (msg.id === assistantId ? { ...msg, content } : msg)));
+        let streamedText = "";
         try {
-          // Stream the answer token-by-token into a placeholder message.
-          const assistantId = Date.now() + 1;
-          let streamedText = "";
-          setMessages((prev) => [
-            ...prev,
-            { id: assistantId, role: "assistant", content: "" },
-          ]);
-          const patchMessage = (content: string) =>
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantId ? { ...msg, content } : msg
-              )
-            );
           for await (const event of streamChatWithGeminiFunctions({
             prompt: trimmed,
             systemInstruction: FACTORY_SYSTEM_INSTRUCTION,
             functions: FACTORY_FUNCTIONS,
-            signal: fallbackController.signal,
+            signal: controller.signal,
+            statusText: "Checking machine data…",
           })) {
             if (event.type === "delta") {
               streamedText += event.text;
-              patchMessage(streamedText);
+              patch(streamedText);
             } else if (event.type === "status") {
-              // Show tool status only while no answer text arrived yet.
-              if (!streamedText) patchMessage(`_${event.text}_`);
+              if (!streamedText) patch(`_${event.text}_`);
             } else {
-              patchMessage(
-                event.text ? event.text : "(Tidak ada jawaban)"
-              );
+              patch(event.text || "(No answer)");
             }
           }
           return;
-        } catch (geminiErr) {
-          const geminiMessage = fallbackController.signal.aborted
-            ? "Gemini timeout (120 detik)"
-            : friendlyGeminiError(geminiErr);
-          setError(`Backend: ${backendMessage}. Gemini: ${geminiMessage}`);
-          return;
+        } catch (err) {
+          if (streamedText.trim()) return; // partial answer is already on screen
+          setMessages((prev) => prev.filter((msg) => msg.id !== assistantId));
+          failures.push(
+            controller.signal.aborted
+              ? `Gemma timed out (${GEMMA_TIMEOUT_MS / 1000} s)`
+              : `Gemma: ${friendlyGeminiError(err)}`
+          );
         } finally {
-          clearTimeout(fallbackTimeoutId);
+          clearTimeout(timeoutId);
         }
       }
-      setError(backendMessage);
+
+      // 3) Offline demo answer from the dashboard's own data.
+      if (canUseMockFallback) {
+        pushAssistant(await answerFromDemoData(trimmed), "demo");
+        if (failures.length) console.info("Ask AI fell back to demo data:", failures.join("; "));
+        return;
+      }
+
+      setError(failures.length ? `Could not get an answer: ${failures.join("; ")}.` : "Could not get an answer.");
     } finally {
-      clearTimeout(backendTimeoutId);
       setIsLoading(false);
     }
   }, []);
 
-  return { messages, isLoading, error, ask, reset };
+  const ask = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      setMessages((prev) => [...prev, { id: Date.now(), role: "user", content: trimmed }]);
+      await run(trimmed);
+    },
+    [run]
+  );
+
+  /** Re-run the last question after an error (does not duplicate the user bubble). */
+  const retry = useCallback(async () => {
+    if (!lastQuestion) return;
+    await checkBackend(true);
+    await run(lastQuestion);
+  }, [lastQuestion, run]);
+
+  return { messages, isLoading, error, ask, retry, reset };
 }
 
 export type AskAiChatController = ReturnType<typeof useAskAiChat>;
@@ -264,10 +207,38 @@ function copyText(text: string) {
   }
 }
 
-// Panel chat tanpa overlay — ditujukan untuk ditempel (anchored) di atas
-// prompt bar, selebar prompt bar, seperti referensi. Composer opsional:
-// di factory shell input-nya adalah pill di bawah panel (showComposer=false),
-// di dialog legacy composer ada di dalam panel (showComposer=true).
+/** Three one-tap demo questions, shown as chips under the Ask AI input. */
+export function SuggestedQuestionChips({
+  onPick,
+  disabled,
+  className,
+}: {
+  onPick: (question: string) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:flex-wrap sm:justify-center sm:overflow-visible ${className ?? ""}`}
+    >
+      {SUGGESTED_QUESTIONS.map((question) => (
+        <button
+          key={question}
+          type="button"
+          disabled={disabled}
+          onClick={() => onPick(question)}
+          className="shrink-0 whitespace-nowrap rounded-full border border-[#3c4043] bg-[#202124]/90 px-3 py-1.5 text-xs text-[#bdc1c6] backdrop-blur transition hover:border-[rgba(138,180,248,0.5)] hover:text-[#e8eaed] disabled:opacity-50"
+        >
+          {question}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Overlay-free chat panel, anchored above the prompt bar at the same width.
+// The composer is optional: on the factory shell the input is the pill below
+// the panel (showComposer=false); the legacy dialog keeps it inside.
 export function AskAiChatPanel({
   chat,
   onClose,
@@ -279,7 +250,7 @@ export function AskAiChatPanel({
   title?: string;
   showComposer?: boolean;
 }) {
-  const { messages, isLoading, error, ask, reset } = chat;
+  const { messages, isLoading, error, ask, retry, reset } = chat;
   const [draft, setDraft] = useState("");
 
   const submitDraft = (event: FormEvent<HTMLFormElement>) => {
@@ -290,12 +261,12 @@ export function AskAiChatPanel({
   };
 
   return (
-    <div className="flex max-h-[52vh] w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#212121] shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+    <div className="flex max-h-[40dvh] w-full flex-col sm:max-h-[52vh] overflow-hidden rounded-3xl border border-white/10 bg-[#212121] shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <button
           type="button"
-          aria-label="Tutup panel chat"
+          aria-label="Close chat panel"
           onClick={onClose}
           className="rounded-full p-1.5 text-neutral-400 transition hover:bg-white/5 hover:text-white"
         >
@@ -306,7 +277,7 @@ export function AskAiChatPanel({
         </p>
         <button
           type="button"
-          aria-label="Reset percakapan"
+          aria-label="Reset conversation"
           onClick={reset}
           className="rounded-full p-1.5 text-neutral-400 transition hover:bg-white/5 hover:text-white"
         >
@@ -318,9 +289,15 @@ export function AskAiChatPanel({
       {/* Riwayat chat */}
       <div className="google-scroll min-h-[120px] flex-1 space-y-5 overflow-y-auto px-5 py-4">
         {messages.length === 0 && !isLoading && (
-          <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm leading-relaxed text-neutral-300">
-            Ajukan pertanyaan tentang performa mesin. Sistem akan menyusun
-            query Flux dan menjawab berdasarkan data InfluxDB.
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm leading-relaxed text-neutral-300">
+              Ask about machine health, alarms, sensor readings or production
+              yield. Minerva builds a query over the plant data and explains
+              the result.
+            </div>
+            {showComposer && (
+              <SuggestedQuestionChips onPick={(q) => void ask(q)} disabled={isLoading} />
+            )}
           </div>
         )}
 
@@ -333,7 +310,7 @@ export function AskAiChatPanel({
               <div className="flex justify-end">
                 <button
                   type="button"
-                  aria-label="Salin pertanyaan"
+                  aria-label="Copy question"
                   onClick={() => copyText(msg.content)}
                   className="rounded-md p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200"
                 >
@@ -343,12 +320,9 @@ export function AskAiChatPanel({
             </div>
           ) : (
             <div key={msg.id} className="space-y-2">
-              <div
-                className="prose prose-invert max-w-full text-[15px] leading-relaxed text-neutral-200"
-                dangerouslySetInnerHTML={{
-                  __html: renderMarkdownToHtml(msg.content),
-                }}
-              />
+              <div className={MARKDOWN_CLASSES}>
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
               {msg.fluxQuery && (
                 <pre className="overflow-x-auto rounded-xl bg-black/50 p-3 text-xs text-blue-200">
                   <code>{msg.fluxQuery}</code>
@@ -357,21 +331,28 @@ export function AskAiChatPanel({
               {msg.rawData && (
                 <details className="group">
                   <summary className="cursor-pointer text-xs font-medium text-neutral-400 transition group-open:text-neutral-200">
-                    Lihat Data Mentah
+                    View raw data
                   </summary>
                   <pre className="mt-2 max-h-48 overflow-auto rounded-xl bg-black/40 p-3 text-xs text-neutral-300">
                     <code>{msg.rawData}</code>
                   </pre>
                 </details>
               )}
-              <button
-                type="button"
-                aria-label="Salin jawaban"
-                onClick={() => copyText(msg.content)}
-                className="rounded-md p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200"
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Copy answer"
+                  onClick={() => copyText(msg.content)}
+                  className="rounded-md p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+                {msg.source && msg.content && (
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                    {SOURCE_LABEL[msg.source]}
+                  </span>
+                )}
+              </div>
             </div>
           )
         )}
@@ -385,13 +366,21 @@ export function AskAiChatPanel({
         )}
 
         {error && (
-          <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <span className="min-w-0 flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={() => void retry()}
+              disabled={isLoading}
+              className="shrink-0 rounded-full bg-red-400/15 px-3 py-1 text-xs font-medium text-red-200 transition hover:bg-red-400/25 disabled:opacity-50"
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>
 
-      {/* Composer di dalam panel (hanya untuk dialog legacy) */}
+      {/* In-panel composer (legacy dialog only) */}
       {showComposer && (
       <div className="px-4 pb-4">
         <form
@@ -409,7 +398,7 @@ export function AskAiChatPanel({
                 setDraft("");
               }
             }}
-            placeholder="Tanyakan soal performa mesin..."
+            placeholder="Ask about machine performance…"
             disabled={isLoading}
             rows={2}
             className="max-h-40 min-h-[56px] resize-none border-0 bg-transparent p-0 text-[15px] text-neutral-100 placeholder:text-neutral-500 focus-visible:ring-0"
@@ -417,7 +406,7 @@ export function AskAiChatPanel({
           <div className="mt-2 flex items-center justify-between">
             <button
               type="button"
-              aria-label="Tambah lampiran"
+              aria-label="Add attachment"
               className="rounded-full p-1.5 text-neutral-400 transition hover:bg-white/5 hover:text-white"
             >
               <Plus className="h-5 w-5" />
@@ -425,7 +414,7 @@ export function AskAiChatPanel({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                aria-label="Input suara"
+                aria-label="Voice input"
                 className="rounded-full p-2 text-neutral-400 transition hover:bg-white/5 hover:text-white"
               >
                 <Mic className="h-4 w-4" />
@@ -433,7 +422,7 @@ export function AskAiChatPanel({
               <button
                 type="submit"
                 disabled={isLoading || !draft.trim()}
-                aria-label="Kirim pertanyaan"
+                aria-label="Send question"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowUp className="h-5 w-5" />

@@ -15,11 +15,17 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-function SimulationAwareContent({ children }: { children: React.ReactNode }) {
+function SimulationAwareContent({
+  children,
+  embedsSimulation,
+}: {
+  children: React.ReactNode;
+  embedsSimulation: boolean;
+}) {
   const { isSimulationMode } = useSimulation();
   return (
     <main className="relative h-full w-full">
-      {isSimulationMode ? <SimulationScene /> : children}
+      {isSimulationMode && !embedsSimulation ? <SimulationScene /> : children}
     </main>
   );
 }
@@ -36,7 +42,11 @@ export default function AppShell({ children }: AppShellProps) {
         <div className="relative min-h-screen bg-slate-950 pb-24">
           {!hideChrome && <TopBar />}
           <div className="pt-0">
-            <SimulationAwareContent>{children}</SimulationAwareContent>
+            {/* The factory shell (`/`) renders the simulation inside its own
+                viewport so its controls stay on screen during a run. */}
+            <SimulationAwareContent embedsSimulation={pathname === "/"}>
+              {children}
+            </SimulationAwareContent>
           </div>
           {!hideChrome && <BottomBar />}
           <SimulationConfiguratorModal />

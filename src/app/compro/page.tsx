@@ -132,7 +132,7 @@ export default function Page() {
                 Interactive Digital Twin Dashboard
               </h3>
               <p className="text-gray-300 text-sm">
-                Lorem ipsum is simply dummy text of the printing industry.
+                Live 3D twin of the whole smelter line, with every machine's status, health score and sensor readings in one view.
               </p>
             </div>
 
@@ -147,7 +147,7 @@ export default function Page() {
                 AI Energy Optimization & Simulation
               </h3>
               <p className="text-gray-300 text-sm">
-                Lorem ipsum is simply dummy text of the printing industry.
+                Test furnace, casting and cooling settings before touching the line, and see the energy, yield and CO₂ impact up front.
               </p>
             </div>
 
@@ -162,7 +162,7 @@ export default function Page() {
                 Predictive & Prescriptive Analysis
               </h3>
               <p className="text-gray-300 text-sm">
-                Lorem ipsum is simply dummy text of the printing industry.
+                Spot failing parts weeks before they stop the line, with a plain-language explanation of what happened, why, and what to do next.
               </p>
             </div>
 
@@ -177,7 +177,7 @@ export default function Page() {
                 Ask AI Agent for Quick Insight
               </h3>
               <p className="text-gray-300 text-sm">
-                Lorem ipsum is simply dummy text of the printing industry.
+                Ask questions in plain language and get answers built from live plant data, such as "which machines need attention right now?".
               </p>
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function Page() {
                   monitoring delays, and energy waste. With a real-time Digital
                   Twin, predictive AI, and smart energy intelligence, MINERVA
                   delivers more efficient, intelligent, and sustainable
-                  operations..
+                  operations.
                 </p>
               </div>
 
@@ -263,45 +263,43 @@ export default function Page() {
             {/* Visi Column */}
             <div>
               <h3 className="text-2xl font-bold text-blue-500 mb-6 uppercase tracking-wider">
-                Visi
+                Vision
               </h3>
-              <div className="text-gray-400 leading-relaxed space-y-4 text-sm md:text-base text-justify">
+              <div className="text-gray-400 leading-relaxed space-y-4 text-sm md:text-base">
                 <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry.
+                  Every factory in Indonesia runs efficient, low-carbon and
+                  self-optimizing operations, guided by a living digital twin of
+                  its production line.
                 </p>
                 <p>
-                  Lorem Ipsum has been the industry&apos;s standard dummy text
-                  ever since the 1500s, when an unknown printer took a galley of
-                  type and scrambled it to make a type specimen book.
+                  We want industrial intelligence to be as accessible to a
+                  regional smelter as it is to a global manufacturer.
                 </p>
-                <p>
-                  It has survived not only five centuries, but also the leap
-                  into electronic typesetting, remaining essentially unchanged.
-                </p>
-                <p>It was popularised in the 1960s with the release of</p>
               </div>
             </div>
 
             {/* Misi Column */}
             <div>
               <h3 className="text-2xl font-bold text-blue-500 mb-6 uppercase tracking-wider">
-                Misi
+                Mission
               </h3>
-              <div className="text-gray-400 leading-relaxed space-y-4 text-sm md:text-base text-justify">
-                <p>
-                  Lorem Ipsum is simply dummy text of the printing and
-                  typesetting industry.
-                </p>
-                <p>
-                  Lorem Ipsum has been the industry&apos;s standard dummy text
-                  ever since the 1500s, when an unknown printer took a galley of
-                  type and scrambled it to make a type specimen book, It has
-                  sürvived not only five centuries, but also the leap into
-                  electronic typesetting, remaining essentially unchanged.
-                </p>
-                <p>It was popularised in the 1960s with the release of</p>
-              </div>
+              <ul className="text-gray-400 leading-relaxed space-y-3 text-sm md:text-base list-disc pl-5">
+                <li>
+                  Connect machines, sensors and production records into one
+                  real-time view of the plant.
+                </li>
+                <li>
+                  Use AI to cut energy waste and predict failures before they
+                  stop production.
+                </li>
+                <li>
+                  Let operators test changes in simulation first, so every
+                  improvement is safe and measurable.
+                </li>
+                <li>
+                  Make plant data easy to question in everyday language.
+                </li>
+              </ul>
             </div>
           </div>
         </div>

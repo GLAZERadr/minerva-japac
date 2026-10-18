@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { LiveSensorReading } from "./useSensorStream";
+import { formatIndicator, indicatorLabel, indicatorUnit } from "@/lib/machine-display";
 
 type MachineStreamTooltipProps = {
   machineName: string;
@@ -11,6 +12,7 @@ type MachineStreamTooltipProps = {
 
 const formatValue = (value: number, sensorName: string) => {
   if (!Number.isFinite(value)) return "-";
+  if (indicatorUnit(sensorName)) return formatIndicator(sensorName, value);
 
   const sensorLower = sensorName.toLowerCase();
 
@@ -79,7 +81,7 @@ export default function MachineStreamTooltip({
               key={reading.id}
               className="flex items-center justify-between gap-3 text-xs"
             >
-              <span className="text-slate-300">{reading.sensorName}</span>
+              <span className="text-slate-300">{indicatorLabel(reading.sensorName)}</span>
               <span className="font-semibold text-blue-200">
                 {formatValue(reading.value, reading.sensorName)}
               </span>

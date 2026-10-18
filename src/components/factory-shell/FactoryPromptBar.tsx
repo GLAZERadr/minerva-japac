@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Mic, Search, Send } from "lucide-react";
-import { AskAiChatPanel, useAskAiChat } from "@/components/AskAiChat";
+import {
+  AskAiChatPanel,
+  SuggestedQuestionChips,
+  useAskAiChat,
+} from "@/components/AskAiChat";
 import BottomBar from "@/components/bottom-bar";
+import { useSimulation } from "@/components/simulation/SimulationProvider";
+import { cn } from "@/lib/utils";
 
 export default function FactoryPromptBar() {
   const [value, setValue] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const chat = useAskAiChat();
+  const { isSimulationMode } = useSimulation();
   // Client-only capability check (after hydration) to avoid SSR mismatch:
   // `window` does not exist during prerender.
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -18,8 +25,8 @@ export default function FactoryPromptBar() {
     );
   }, []);
 
-  // Global opener (top bar / left rail): buka panel anchored + kirim
-  // pertanyaan bila ada, tanpa overlay.
+  // Global opener (top bar / left rail): open the anchored panel and send the
+  // question if one was passed, without an overlay.
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ question?: string }>).detail;
@@ -41,9 +48,11 @@ export default function FactoryPromptBar() {
   };
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center px-4">
+    <div className="pointer-events-none absolute bottom-3 left-0 right-0 z-20 flex justify-center px-3 transition-[right] duration-200 sm:bottom-6 sm:px-4 md:right-[max(var(--detail-panel-w,0px),var(--rail-panel-w,0px))]">
       <div className="pointer-events-auto flex w-full max-w-3xl flex-col gap-2">
-        <div className="flex w-full justify-center">
+        {/* Kept mounted (its dialogs must survive) but hidden while chatting,
+            so it doesn't float over the middle of the 3D view. */}
+        <div className={cn("flex w-full justify-center", chatOpen && !isSimulationMode && "hidden")}>
           <BottomBar embedded />
         </div>
         {chatOpen && (
@@ -54,7 +63,7 @@ export default function FactoryPromptBar() {
             e.preventDefault();
             submit();
           }}
-          className="flex w-full items-center gap-1 rounded-full border border-[#3c4043] bg-[#303134] py-2 pl-4 pr-2 shadow-2xl"
+          className="flex w-full items-center gap-1 rounded-full border border-[#3c4043] bg-[#303134] py-1.5 pl-4 pr-1.5 shadow-2xl sm:py-2 sm:pr-2"
         >
           <span className="shrink-0 text-[#9aa0a6]">
             <Search className="h-[18px] w-[18px]" />
@@ -66,7 +75,7 @@ export default function FactoryPromptBar() {
             onFocus={() => setChatOpen(true)}
             placeholder="Ask Minerva AI about the factory…"
             aria-label="Ask Minerva AI about the factory"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-[#e8eaed] placeholder:text-[#9aa0a6] focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-base text-[#e8eaed] sm:text-[15px] placeholder:text-[#9aa0a6] focus:outline-none"
           />
           <button
             type="button"
@@ -88,6 +97,15 @@ export default function FactoryPromptBar() {
             <Send className="h-4 w-4" />
           </button>
         </form>
+        {chat.messages.length === 0 && (
+          <SuggestedQuestionChips
+            disabled={chat.isLoading}
+            onPick={(question) => {
+              setChatOpen(true);
+              void chat.ask(question);
+            }}
+          />
+        )}
       </div>
     </div>
   );

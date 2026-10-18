@@ -52,6 +52,8 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
     flowsError,
     selectedProduct,
     realtimeResult,
+    overallProgress,
+    skipSimulation,
   } = useSimulation();
 
   const isRealtime = simulationVariant === "realtime";
@@ -60,16 +62,15 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
   const progressPercent = useMemo(() => {
     if (!isSimulationMode) return 0;
     if (isRealtime) return activeMachine ? 100 : 0;
-    if (!Number.isFinite(stepProgress)) return 0;
-    return Math.max(0, Math.min(100, Math.round(stepProgress * 100)));
-  }, [activeMachine, isRealtime, isSimulationMode, stepProgress]);
+    if (!Number.isFinite(overallProgress)) return 0;
+    return Math.max(0, Math.min(100, Math.round(overallProgress * 100)));
+  }, [activeMachine, isRealtime, isSimulationMode, overallProgress]);
 
   const nextMachine = useMemo(() => {
     if (isRealtime || !activeMachineId) return null;
     const currentIndex = steps.findIndex((step) => step.id === activeMachineId);
     if (currentIndex < 0) return null;
-    const nextIndex = (currentIndex + 1) % steps.length;
-    return steps[nextIndex];
+    return steps[currentIndex + 1] ?? null;
   }, [activeMachineId, isRealtime, steps]);
 
   const handleVariantClick = useCallback(
@@ -106,7 +107,13 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
     (payload: ProductDataResponse) => {
       setProductModalOpen(false);
       setProductSuccessMessage(
-        `Data produk ${payload.lot} berhasil disimpan ke backend.`
+        `Lot ${payload.lot} saved${
+          payload.source === "firestore"
+            ? " to Cloud Firestore"
+            : payload.source === "mock"
+              ? " (demo data — offline)"
+              : ""
+        }.`
       );
     },
     []
@@ -125,15 +132,15 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
   const statusLabel = useMemo(() => {
     const productName = selectedProduct?.productName;
     const baseFlowLabel = flowsLoading
-      ? "Memuat flow produk"
+      ? "Loading product flows"
       : productName ?? "Default sequence";
     if (isSimulationMode) {
       if (isRealtime) {
-        return activeMachine?.name ?? "Menunggu sinyal realtime";
+        return activeMachine?.name ?? "Waiting for realtime signal";
       }
-      return activeMachine?.name ?? `Simulasi • ${baseFlowLabel}`;
+      return activeMachine?.name ?? `Simulation • ${baseFlowLabel}`;
     }
-    return isRealtime ? "Mode realtime siap dijalankan" : baseFlowLabel;
+    return isRealtime ? "Realtime mode ready" : baseFlowLabel;
   }, [
     activeMachine,
     flowsLoading,
@@ -145,23 +152,23 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
   const subStatusLabel = useMemo(() => {
     if (isRealtime) {
       return isSimulationMode
-        ? "Memantau status mesin dari stream InfluxDB."
-        : "Gunakan mode realtime untuk menyoroti mesin dari stream InfluxDB.";
+        ? "Tracking machine status from the InfluxDB stream."
+        : "Use realtime mode to highlight machines from the InfluxDB stream.";
     }
     if (!isSimulationMode) {
       if (flowsLoading) {
-        return "Memuat konfigurasi flow simulasi...";
+        return "Loading simulation flow configuration…";
       }
       if (flowsError) {
         return flowsError;
       }
       return selectedProduct?.description
         ? selectedProduct.description
-        : `${steps.length} mesin akan diikutsertakan.`;
+        : `${steps.length} machines will be included.`;
     }
     return nextMachine
-      ? `Berikutnya: ${nextMachine.name}`
-      : "Memuat urutan produksi dummy";
+      ? `Next: ${nextMachine.name}`
+      : "Loading production sequence";
   }, [
     flowsError,
     flowsLoading,
@@ -225,19 +232,22 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
   }, [isAutonomousRunning, isSimulationMode, realtimeResult]);
 
   const baseModeButtonClass =
-    "h-8 rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.08em] transition disabled:opacity-50 disabled:pointer-events-none";
+    "h-8 shrink-0 rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.08em] transition disabled:opacity-50 disabled:pointer-events-none";
   const monitoringButtonClass = cn(
     baseModeButtonClass,
     !isSimulationMode
       ? "bg-blue-500/20 text-white hover:bg-blue-500/25"
       : "bg-transparent text-slate-300 hover:bg-slate-700/40 hover:text-white"
   );
-  const simulationButtonClass = cn(
-    baseModeButtonClass,
-    isSimulationMode
-      ? "bg-blue-500/20 text-white hover:bg-blue-500/25"
-      : "bg-transparent text-slate-300 hover:bg-slate-700/40 hover:text-white"
-  );
+  const modeButtonClass = (active: boolean) =>
+    cn(
+      baseModeButtonClass,
+      active
+        ? "bg-blue-500/20 text-white hover:bg-blue-500/25"
+        : "bg-transparent text-slate-300 hover:bg-slate-700/40 hover:text-white"
+    );
+  const simulationButtonClass = modeButtonClass(isSimulationMode && !isAutonomousRunning);
+  const autonomousButtonClass = modeButtonClass(isSimulationMode && isAutonomousRunning);
 
   return (
     <footer
@@ -252,8 +262,8 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1 rounded-full bg-slate-800/60 p-1 shadow-inner">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-slate-800/60 p-1 shadow-inner [scrollbar-width:none]">
               <Button
                 type="button"
                 size="sm"
@@ -271,7 +281,7 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
                 disabled={isModeSwitchDisabled}
                 className={simulationButtonClass}
               >
-                Simulasi
+                Simulation
               </Button>
               <Button
                 type="button"
@@ -279,34 +289,34 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
                 variant="ghost"
                 onClick={() => setAutonomousConfirmOpen(true)}
                 disabled={isModeSwitchDisabled}
-                className={simulationButtonClass}
+                className={autonomousButtonClass}
               >
-                Autonomus
+                Autonomous
               </Button>
             </div>
-            {isSimulationMode && (
-              <div className="flex items-center gap-2 rounded-full bg-slate-800/60 p-1 text-xs font-semibold text-slate-300 shadow-inner">
-                {(
-                  [{ value: "sequence", label: "Auto manufacture" }] as const
-                ).map((option) => {
-                  const isActive = simulationVariant === option.value;
-                  return null;
-                })}
-              </div>
-            )}
             {isSimulationMode && (
               <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200">
                 {formatSeconds(elapsedSeconds)}
               </span>
+            )}
+            {isSimulationMode && !isRealtime && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={skipSimulation}
+                className="h-8 rounded-full border-blue-400/40 bg-blue-500/10 px-3 text-xs font-semibold text-blue-100 hover:bg-blue-500/20"
+              >
+                Skip to report
+              </Button>
             )}
             {!isSimulationMode && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setProductModalOpen(true)}
-                className="rounded-full border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/20"
+                className="hidden rounded-full border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/20 md:inline-flex"
               >
-                Tambah data produk
+                Add product data
               </Button>
             )}
           </div>
@@ -318,19 +328,26 @@ function BottomBar({ embedded = false }: { embedded?: boolean }) {
         )}
         {isSimulationMode && (
           <div className="flex flex-col gap-1">
-            <div className="relative h-1 w-full overflow-hidden rounded-full bg-slate-700">
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+              aria-label="Simulation progress"
+              className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-700/80"
+            >
               <div
-                className="absolute inset-y-0 left-0 bg-blue-500 transition-[width]"
+                className="absolute inset-y-0 left-0 rounded-full bg-[#8ab4f8] transition-[width] duration-200"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="flex justify-between text-[11px] font-medium text-slate-400">
-              <span>
+            <div className="flex justify-between gap-3 text-[11px] font-medium text-slate-300">
+              <span className="min-w-0 truncate">
                 {isRealtime
-                  ? `Aktif (Realtime): ${activeMachine?.name ?? "-"}`
-                  : `Aktif: ${activeMachine?.name ?? "-"}`}
+                  ? `Active (realtime): ${activeMachine?.name ?? "-"}`
+                  : `Active: ${activeMachine?.name ?? "-"}${nextMachine ? ` · next ${nextMachine.name}` : ""}`}
               </span>
-              <span>{progressLabel}</span>
+              <span className="shrink-0 tabular-nums">{progressLabel}</span>
             </div>
           </div>
         )}

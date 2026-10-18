@@ -125,8 +125,8 @@
   },
   {
     "productId": "all-machines",
-    "productName": "Semua Mesin",
-    "description": "Simulasi mencakup seluruh mesin yang tersedia",
+    "productName": "All Machines",
+    "description": "Simulation covering every available machine",
     "defaultConfig": {
       "lot": "LOT-ALL",
       "derivative": "Mixed",

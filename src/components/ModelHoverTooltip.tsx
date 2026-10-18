@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MachineDetails } from "@/lib/machines";
 import {
+  HEALTH_TEXT,
+  STATUS_COLORS,
+  getMachineStatus,
+  healthTone,
+} from "@/lib/machine-display";
+import {
   Tooltip,
   TooltipArrow,
   TooltipContent,
@@ -60,15 +66,22 @@ export function ModelHoverTooltip({ info }: ModelHoverTooltipProps) {
           </p>
           {machine ? (
             <div className="space-y-1 text-xs text-white">
-              <p>Location: {machine.location || "-"}</p>
-              <p>
-                Health Score:{" "}
-                {typeof machine.healthScore === "number"
-                  ? `${machine.healthScore}%`
-                  : "-"}
+              <p className="flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: STATUS_COLORS[getMachineStatus(machine)] }}
+                />
+                {getMachineStatus(machine)}
               </p>
               <p>
-                Active Alarms: {machine.alarms?.active ?? 0} /{" "}
+                Health score:{" "}
+                <span className={`font-semibold ${HEALTH_TEXT[healthTone(machine.healthScore)]}`}>
+                  {typeof machine.healthScore === "number" ? `${machine.healthScore}%` : "-"}
+                </span>
+              </p>
+              <p>Location: {machine.location || "-"}</p>
+              <p>
+                Active alarms: {machine.alarms?.active ?? 0} /{" "}
                 {machine.alarms?.total ?? 0}
               </p>
             </div>

@@ -1,0 +1,89 @@
+{
+  "lots": [
+    {
+      "lot": "LOT-6061-0418",
+      "status": "completed",
+      "activeMachineId": "weightning",
+      "averages": {
+        "temperature": 731.4,
+        "argon_pressure": 2.4,
+        "water_pump": 78,
+        "energy_usage": 412.6
+      },
+      "operationHour": 2.1,
+      "goodProduct": 46,
+      "defectProduct": 2,
+      "conclusion": "Stable run. Furnace held 731 °C with 2.4 bar argon; yield 95.8%, 3% below the energy baseline.",
+      "isConclusion": true,
+      "hoursAgo": 1.5
+    },
+    {
+      "lot": "LOT-6063-0417",
+      "status": "completed",
+      "activeMachineId": "weightning",
+      "averages": {
+        "temperature": 724.9,
+        "argon_pressure": 2.6,
+        "water_pump": 81,
+        "energy_usage": 398.2
+      },
+      "operationHour": 1.8,
+      "goodProduct": 39,
+      "defectProduct": 4,
+      "conclusion": "Slight porosity on 4 billets traced to casting speed spikes; recommend capping speed at 14 m/min.",
+      "isConclusion": true,
+      "hoursAgo": 6.0
+    },
+    {
+      "lot": "LOT-7075-0416",
+      "status": "processing",
+      "activeMachineId": "casting-machine",
+      "averages": {
+        "temperature": 742.2,
+        "argon_pressure": 2.5,
+        "water_pump": 76,
+        "energy_usage": 221.9
+      },
+      "operationHour": 0.9,
+      "goodProduct": 18,
+      "defectProduct": 1,
+      "conclusion": null,
+      "isConclusion": false,
+      "hoursAgo": 0.3
+    },
+    {
+      "lot": "LOT-6061-0415",
+      "status": "completed",
+      "activeMachineId": "weightning",
+      "averages": {
+        "temperature": 733.0,
+        "argon_pressure": 2.3,
+        "water_pump": 79,
+        "energy_usage": 430.4
+      },
+      "operationHour": 2.3,
+      "goodProduct": 51,
+      "defectProduct": 3,
+      "conclusion": "Within spec. Homogenizing dwell extended 6 min after an alarm; no quality impact.",
+      "isConclusion": true,
+      "hoursAgo": 26.0
+    },
+    {
+      "lot": "LOT-6082-0414",
+      "status": "completed",
+      "activeMachineId": "weightning",
+      "averages": {
+        "temperature": 728.6,
+        "argon_pressure": 2.5,
+        "water_pump": 80,
+        "energy_usage": 405.1
+      },
+      "operationHour": 2.0,
+      "goodProduct": 44,
+      "defectProduct": 2,
+      "conclusion": "Nominal run; cooling table segment 3 flagged for maintenance at next shift change.",
+      "isConclusion": true,
+      "hoursAgo": 49.0
+    }
+  ]
+}

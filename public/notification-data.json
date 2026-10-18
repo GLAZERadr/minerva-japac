@@ -1,25 +1,33 @@
 {
   "notifications": [
     {
+      "id": "alarm-casting-speed",
+      "title": "Casting Speed Spike",
+      "message": "Casting machine exceeded 16 m/min for 40 s; porosity risk on the current lot.",
+      "timestamp": "2025-11-10T07:42:00Z",
+      "severity": "critical",
+      "machineId": "casting-machine"
+    },
+    {
       "id": "alarm-furnace-temp",
       "title": "Furnace Temperature High",
-      "message": "Zona pemanasan furnace melewati ambang aman 780°C selama 2 menit.",
+      "message": "Furnace heating zone stayed above the 780 °C safety limit for 2 minutes.",
       "timestamp": "2025-11-10T07:20:00Z",
       "severity": "critical",
       "machineId": "furnace"
     },
     {
       "id": "alarm-rod-feeder-vibration",
-      "title": "Getaran Rod Feeder",
-      "message": "Sensor vibrasi mencatat anomali pada rod feeder line B.",
+      "title": "Rod Feeder Vibration",
+      "message": "Vibration sensor recorded an anomaly on rod feeder line B.",
       "timestamp": "2025-11-10T06:45:00Z",
       "severity": "warning",
       "machineId": "rod-feeder"
     },
     {
       "id": "maintenance-homogenizing",
-      "title": "Reminder Maintenance",
-      "message": "Jadwal inspeksi homogenizing chamber akan jatuh tempo 12 jam lagi.",
+      "title": "Maintenance Reminder",
+      "message": "Homogenizing chamber inspection is due in 12 hours.",
       "timestamp": "2025-11-10T04:10:00Z",
       "severity": "info",
       "machineId": "homogenizing"
@@ -27,14 +35,14 @@
     {
       "id": "quality-check",
       "title": "Quality Check Update",
-      "message": "Batch extrusion terakhir lulus QC, siap dikirim ke storage zone D.",
+      "message": "The latest extrusion batch passed QC and is ready for storage zone D.",
       "timestamp": "2025-11-10T03:30:00Z",
       "severity": "info"
     },
     {
       "id": "network-node-red",
       "title": "Node-RED Connection",
-      "message": "Gateway Node-RED gedung E mengalami reconnect 3x dalam 15 menit.",
+      "message": "The building E Node-RED gateway reconnected 3 times in 15 minutes.",
       "timestamp": "2025-11-10T02:55:00Z",
       "severity": "warning"
     }

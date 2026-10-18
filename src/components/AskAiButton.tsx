@@ -68,8 +68,8 @@ export function AskAiButton({ className, hideTrigger }: { className?: string; hi
       <DialogContent className="gap-0 border-white/10 bg-transparent p-0 shadow-none sm:max-w-2xl">
         <DialogTitle className="sr-only">Ask AI</DialogTitle>
         <DialogDescription className="sr-only">
-          Ajukan pertanyaan tentang performa mesin. Sistem akan menyusun query
-          Flux dan menjawab berdasarkan data InfluxDB.
+          Ask about machine performance. Minerva builds a Flux query and
+          answers from the InfluxDB plant data.
         </DialogDescription>
         <AskAiChatPanel chat={chat} onClose={() => setOpen(false)} showComposer />
       </DialogContent>

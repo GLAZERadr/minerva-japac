@@ -108,7 +108,7 @@ const severityVisuals: Record<
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString("id-ID", {
+  return date.toLocaleString("en-GB", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -260,7 +260,7 @@ export default function TopBar() {
               variant="secondary"
               className="uppercase tracking-[0.18em] text-[10px] text-slate-300"
             >
-              Nama Pabrik
+              Plant
             </Badge>
             <Badge className="bg-blue-500 text-white shadow-[0_0_18px_rgba(59,130,246,0.45)]">
               Smelter
@@ -276,7 +276,7 @@ export default function TopBar() {
               className="uppercase tracking-[0.2em]"
               onClick={() => setProductModalOpen(true)}
             >
-              Data Produk
+              Product Data
             </Button>
             <div ref={notificationDropdownRef} className="relative">
               <Button

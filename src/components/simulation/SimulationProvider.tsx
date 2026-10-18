@@ -17,6 +17,11 @@ import {
   baseMachineRegistry,
   cloneStep,
 } from "./simulation-data";
+import {
+  computeSimulationReport,
+  type ComparisonRow,
+  type ReportParameters,
+} from "@/lib/simulation-report";
 
 export type SimulationVariant = "sequence" | "realtime";
 
@@ -65,6 +70,11 @@ type SimulationContextValue = {
   activeMachine: SimulationStep | null;
   elapsedSeconds: number;
   stepProgress: number; // 0..1 progress within the current machine
+  /** 0..1 progress through the whole sequence run. */
+  overallProgress: number;
+  totalDuration: number;
+  /** Jump to the end of a running sequence and show the report. */
+  skipSimulation: () => void;
   productFlows: ProductFlowDefinition[];
   flowsLoading: boolean;
   flowsError: string | null;
@@ -114,6 +124,10 @@ export type RealtimeResult = {
   defectProduct: number | null;
   conclusion: string;
   updatedAt?: string | null;
+  /** Before (current practice) vs after (simulated settings). */
+  comparison?: ComparisonRow[];
+  parameters?: ReportParameters;
+  productName?: string | null;
 };
 
 export function SimulationProvider({
@@ -152,6 +166,10 @@ export function SimulationProvider({
   const realtimeIntervalRef = useRef<number | null>(null);
   const elapsedIntervalRef = useRef<number | null>(null);
   const hasInitialisedFlowsRef = useRef(false);
+  const lastConfigurationRef = useRef<SimulationConfiguratorFormValues | null>(null);
+  const selectedProductRef = useRef<ProductFlowDefinition | null>(null);
+  lastConfigurationRef.current = lastConfiguration;
+  selectedProductRef.current = selectedProduct;
 
   const totalDuration = useMemo(
     () => currentSteps.reduce((acc, item) => acc + item.duration, 0),
@@ -225,7 +243,7 @@ export function SimulationProvider({
       } catch (error) {
         if (!active) return;
         console.error("Failed to load simulation flows", error);
-        setFlowsError("Gagal memuat konfigurasi flow simulasi.");
+        setFlowsError("Could not load the simulation flow configuration.");
         setProductFlows([]);
       } finally {
         if (active) {
@@ -381,49 +399,27 @@ export function SimulationProvider({
           setStepProgress(1);
           setElapsedSeconds(totalDuration);
 
-          // attempt to load simulation result JSON and surface it
-          try {
-            const resp = await fetch("/simulation-results.json", {
-              cache: "no-store",
-            });
-            if (resp.ok) {
-              const json = await resp.json();
-              const result: RealtimeResult = {
-                lot: typeof json?.lot === "string" ? json.lot : "-",
-                status: json?.status === "finish" ? "finish" : "process",
-                averages:
-                  typeof json?.averages === "object" ? json.averages : {},
-                operationHour:
-                  typeof json?.operationHour === "number" ||
-                  typeof json?.operationHour === "string"
-                    ? String(json.operationHour)
-                    : null,
-                goodProduct:
-                  typeof json?.goodProduct === "number"
-                    ? json.goodProduct
-                    : typeof json?.goodProduct === "string"
-                    ? Number.parseInt(json.goodProduct, 10) || null
-                    : null,
-                defectProduct:
-                  typeof json?.defectProduct === "number"
-                    ? json.defectProduct
-                    : typeof json?.defectProduct === "string"
-                    ? Number.parseInt(json.defectProduct, 10) || null
-                    : null,
-                conclusion:
-                  typeof json?.conclusion === "string"
-                    ? json.conclusion
-                    : "Simulation finished.",
-                updatedAt:
-                  typeof json?.updatedAt === "string"
-                    ? json.updatedAt
-                    : undefined,
-              };
-              setRealtimeResult(result);
-            }
-          } catch (err) {
-            /* ignore */
-          }
+          // Report computed from the configured parameters (before vs after).
+          const config = lastConfigurationRef.current;
+          const report = computeSimulationReport({
+            lot: config?.general?.lot,
+            productName: selectedProductRef.current?.productName ?? null,
+            machines: currentSteps.length,
+            parameters: config?.parameters,
+          });
+          setRealtimeResult({
+            lot: report.lot,
+            status: "finish",
+            averages: report.averages,
+            operationHour: String(report.operationHour),
+            goodProduct: report.goodProduct,
+            defectProduct: report.defectProduct,
+            conclusion: report.conclusion,
+            updatedAt: new Date().toISOString(),
+            comparison: report.comparison,
+            parameters: report.parameters,
+            productName: report.productName,
+          });
 
           // stop simulation and clear timers
           clearTimers();
@@ -615,6 +611,18 @@ export function SimulationProvider({
     simulationVariant,
   ]);
 
+  const skipSimulation = useCallback(() => {
+    if (!isSimulationMode || simulationVariant !== "sequence") return;
+    if (startTimeRef.current == null || totalDuration <= 0) return;
+    // Move the start back so the next tick (≤ 250 ms) sees the run as finished.
+    startTimeRef.current = performance.now() - totalDuration * 1000;
+  }, [isSimulationMode, simulationVariant, totalDuration]);
+
+  const overallProgress =
+    isSimulationMode && simulationVariant === "sequence" && totalDuration > 0
+      ? Math.min(1, elapsedSeconds / totalDuration)
+      : 0;
+
   const openConfigurator = useCallback(() => {
     setConfiguratorOpen(true);
   }, []);
@@ -699,6 +707,9 @@ export function SimulationProvider({
       activeMachine,
       elapsedSeconds,
       stepProgress,
+      overallProgress,
+      totalDuration,
+      skipSimulation,
       productFlows,
       flowsLoading,
       flowsError,
@@ -718,6 +729,9 @@ export function SimulationProvider({
       closeConfigurator,
       currentSteps,
       elapsedSeconds,
+      overallProgress,
+      skipSimulation,
+      totalDuration,
       dismissRealtimeResult,
       flowsError,
       flowsLoading,
@@ -744,49 +758,7 @@ export function SimulationProvider({
   useEffect(() => {
     const prev = prevIsSimulationRef.current;
     if (prev && !isSimulationMode) {
-      (async () => {
-        try {
-          const resp = await fetch("/simulation-results.json", {
-            cache: "no-store",
-          });
-          if (resp.ok) {
-            const json = await resp.json();
-            const result: RealtimeResult = {
-              lot: typeof json?.lot === "string" ? json.lot : "-",
-              status: json?.status === "finish" ? "finish" : "process",
-              averages: typeof json?.averages === "object" ? json.averages : {},
-              operationHour:
-                typeof json?.operationHour === "number" ||
-                typeof json?.operationHour === "string"
-                  ? String(json.operationHour)
-                  : null,
-              goodProduct:
-                typeof json?.goodProduct === "number"
-                  ? json.goodProduct
-                  : typeof json?.goodProduct === "string"
-                  ? Number.parseInt(json.goodProduct, 10) || null
-                  : null,
-              defectProduct:
-                typeof json?.defectProduct === "number"
-                  ? json.defectProduct
-                  : typeof json?.defectProduct === "string"
-                  ? Number.parseInt(json.defectProduct, 10) || null
-                  : null,
-              conclusion:
-                typeof json?.conclusion === "string"
-                  ? json.conclusion
-                  : "Simulation finished.",
-              updatedAt:
-                typeof json?.updatedAt === "string"
-                  ? json.updatedAt
-                  : undefined,
-            };
-            setRealtimeResult(result);
-          }
-        } catch (err) {
-          /* ignore */
-        }
-
+      (() => {
         try {
           window.dispatchEvent(
             new CustomEvent("__simulationDisabled", {

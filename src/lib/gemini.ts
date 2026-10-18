@@ -52,7 +52,7 @@ export function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error(
-      "NEXT_PUBLIC_GEMINI_API_KEY belum diisi. Buat key di Google AI Studio (aistudio.google.com) lalu isi di .env.local."
+      "NEXT_PUBLIC_GEMINI_API_KEY is not set. Create a key in Google AI Studio (aistudio.google.com) and add it to .env.local."
     );
   }
   if (!cachedClient) {
@@ -239,9 +239,9 @@ export function friendlyGeminiError(error: unknown): string {
   }
   const text = (message ?? raw).trim();
   if (/internal error/i.test(text)) {
-    return "Server AI sedang sibuk (internal error). Coba lagi sebentar.";
+    return "The AI service is busy (internal error). Please try again shortly.";
   }
-  return text || "Terjadi kesalahan tak terduga.";
+  return text || "An unexpected error occurred.";
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +344,7 @@ export async function* streamChatWithGeminiFunctions(args: {
     { role: "user", parts: [{ text: args.prompt }] },
   ];
   const maxTurns = Math.max(1, args.maxTurns ?? 5);
-  const statusText = args.statusText ?? "Mengecek data mesin…";
+  const statusText = args.statusText ?? "Checking machine data…";
   let fullText = "";
 
   for (let turn = 0; turn < maxTurns; turn++) {
@@ -431,7 +431,7 @@ export async function* streamChatWithGeminiFunctions(args: {
 
   yield {
     type: "done",
-    text: fullText.trim() || "Batas langkah function calling tercapai tanpa jawaban akhir.",
+    text: fullText.trim() || "Reached the function-calling step limit without a final answer.",
   };
 }
 
@@ -512,7 +512,7 @@ export async function chatWithGeminiFunctions(args: {
   }
 
   return {
-    text: "Batas langkah function calling tercapai tanpa jawaban akhir.",
+    text: "Reached the function-calling step limit without a final answer.",
     groundingSources: [],
   };
 }
@@ -564,7 +564,7 @@ export const FACTORY_FUNCTIONS: GeminiFunction[] = [
 /** Factory-aware system prompt for the Ask-AI panel. */
 export const FACTORY_SYSTEM_INSTRUCTION = [
   "You are Minerva AI, the assistant for a sustainable-manufacturing digital twin.",
-  "Answer in Indonesian (Bahasa Indonesia), concisely, with markdown formatting.",
+  "Answer in English, concisely, with markdown formatting.",
   "You know the factory line: furnace, rod-feeder, casting-machine, UT, CT, homogenizing, charging-machine, swarf, sawing, weighing.",
   "If the user asks about machine health, alarms, or maintenance, use the getFactoryMachines function.",
 ].join(" ");

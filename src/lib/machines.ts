@@ -33,6 +33,8 @@ export type MachineDetails = {
   alarms: MachineAlarms;
   predictiveMaintenance: PredictiveMaintenanceEntry[];
   healthScore: number;
+  /** Running | Idle | Trouble | Maintenance | Shutdown (derived when absent). */
+  status?: string;
   prescriptiveMaintenance?: PrescriptiveMaintenanceEntry;
 };
 

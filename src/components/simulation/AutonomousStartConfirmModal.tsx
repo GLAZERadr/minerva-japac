@@ -31,8 +31,9 @@ export default function AutonomousStartConfirmModal({
             Start Autonomous Mode?
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-[#9aa0a6]">
-            Apakah anda akan memulai autonomus menggunakan akurasi data saat
-            ini?
+            Minerva will run the line autonomously using the current data
+            accuracy, then compare the simulated result with real sensor
+            data. Start now?
           </DialogDescription>
         </DialogHeader>
 

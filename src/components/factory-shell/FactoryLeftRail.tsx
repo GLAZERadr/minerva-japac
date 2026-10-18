@@ -6,12 +6,14 @@ import {
   Box,
   Building2,
   Database,
+  PackagePlus,
   PanelLeft,
   Play,
   Sparkles,
 } from "lucide-react";
 import { useSimulation } from "@/components/simulation/SimulationProvider";
 import ProductDataViewerModal from "@/components/ProductDataViewerModal";
+import ProductDataModal from "@/components/ProductDataModal";
 import { openAskAi } from "./FactoryTopBar";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +64,7 @@ export default function FactoryLeftRail({
   const { isSimulationMode, simulationVariant, elapsedSeconds, openConfigurator } =
     useSimulation();
   const [productOpen, setProductOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const items = [
     {
@@ -89,6 +92,14 @@ export default function FactoryLeftRail({
       onClick: () => setProductOpen(true),
     },
     {
+      key: "add",
+      title: "Add product data",
+      desc: "Register a new lot",
+      icon: <PackagePlus className="h-5 w-5" />,
+      active: false,
+      onClick: () => setAddOpen(true),
+    },
+    {
       key: "ask",
       title: "Ask AI",
       desc: "Query machine data",
@@ -102,7 +113,8 @@ export default function FactoryLeftRail({
     <>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-full flex-col border-r border-[#333333] bg-[#181818] transition-all duration-300",
+          "fixed left-0 top-0 z-50 hidden h-full flex-col border-r border-[#333333] bg-[#181818] transition-all duration-300",
+          "md:flex",
           expanded ? "w-[260px]" : "w-[60px]"
         )}
       >
@@ -213,6 +225,11 @@ export default function FactoryLeftRail({
         </div>
       </aside>
       <ProductDataViewerModal isOpen={productOpen} onCloseAction={() => setProductOpen(false)} />
+      <ProductDataModal
+        isOpen={addOpen}
+        onCloseAction={() => setAddOpen(false)}
+        onSuccess={() => setProductOpen(true)}
+      />
     </>
   );
 }

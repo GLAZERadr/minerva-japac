@@ -16,7 +16,8 @@ import { mountModelModal, unmountModelModal } from "./ModelModal";
 import { ModelHoverTooltip, type ModelHoverInfo } from "./ModelHoverTooltip";
 import MachineStreamTooltips from "./simulation/MachineStreamTooltips";
 import type { MachineDetails } from "@/lib/machines";
-import { loadMachineById } from "@/lib/machines";
+import { loadMachineById, loadMachines } from "@/lib/machines";
+import { STATUS_COLORS, getMachineStatus } from "@/lib/machine-display";
 
 type ModelItem = {
   id: string; // unique identifier for the model
@@ -279,6 +280,46 @@ export default function GLTFViewer({
       } catch (err) {
         console.error("Failed to mount model modal", err);
       }
+    };
+
+    // Status rings: a flat ring under each machine in its status colour
+    // (Running / Idle / Trouble / Maintenance / Shutdown). Not pickable.
+    const statusRings: THREE.Mesh[] = [];
+    const machinesForStatus = loadMachines().catch(() => [] as MachineDetails[]);
+    const addStatusRing = (modelId: string, target: THREE.Object3D) => {
+      void machinesForStatus.then((list) => {
+        if (disposed || modelId === "arrow") return;
+        const machine = list.find((item) => item.id === modelId);
+        if (!machine) return;
+        target.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(target);
+        if (box.isEmpty()) return;
+        const size = box.getSize(new THREE.Vector3());
+        // Ellipse fitted to the footprint so long machines don't get huge rings.
+        const rx = size.x * 0.55 + 0.06;
+        const rz = size.z * 0.55 + 0.06;
+        const material = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(STATUS_COLORS[getMachineStatus(machine)]),
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        });
+        const thickness = Math.min(0.12, Math.min(rx, rz) * 0.25);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(1 - thickness / Math.max(rx, rz), 1, 64), material);
+        ring.rotation.x = -Math.PI / 2;
+        ring.scale.set(rx, rz, 1);
+        ring.position.set(
+          (box.min.x + box.max.x) / 2,
+          Math.max(box.min.y, 0) + 0.015, // never below the floor plane (y = 0)
+          (box.min.z + box.max.z) / 2
+        );
+        ring.renderOrder = 2;
+        ring.raycast = () => {};
+        ring.userData.allowInteraction = false;
+        scene.add(ring);
+        statusRings.push(ring);
+      });
     };
 
     // track loaded objects, materials and textures for cleanup
@@ -600,6 +641,7 @@ export default function GLTFViewer({
 
           scene.add(obj);
           objects.set(m.id, obj);
+          if (allowInteraction) addStatusRing(m.id, obj);
           objectsMapRef.current.set(m.id, obj);
           try {
             if (!obj.name) obj.name = m.id;
@@ -1347,6 +1389,12 @@ export default function GLTFViewer({
       } catch (e) {
         // ignore
       }
+      statusRings.forEach((ring) => {
+        scene.remove(ring);
+        ring.geometry.dispose();
+        (ring.material as THREE.Material).dispose();
+      });
+      statusRings.length = 0;
       renderer.dispose();
       if (renderer.domElement && renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
@@ -1373,6 +1421,7 @@ export default function GLTFViewer({
         machineObjects={objectsMapRef.current}
         containerWidth={containerSize.width}
         containerHeight={containerSize.height}
+        containerEl={containerRef.current}
       />
     </>
   );

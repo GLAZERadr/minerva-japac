@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// MINERVA dashboard data. The web app signs every browser in anonymously
+// (src/lib/firestore.ts), so "signed in" means "loaded from the dashboard".
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Production lots — created, acknowledged and deleted from the dashboard.
+    match /products/{lot} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && lot.matches('^[A-Za-z0-9-]{3,40}$')
+        && request.resource.data.lot == lot
+        && request.resource.data.keys().hasOnly([
+          'lot', 'status', 'activeMachineId', 'averages', 'operationHour',
+          'goodProduct', 'defectProduct', 'conclusion', 'isConclusion', 'updatedAt'
+        ])
+        && request.resource.data.status in ['processing', 'completed']
+        && request.resource.data.goodProduct is int
+        && request.resource.data.defectProduct is int
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if signedIn();
+    }
+
+    // Plant alerts — read-only for the dashboard; written by the seed script
+    // (Admin SDK) or, later, by Node-RED / the Go API.
+    match /notifications/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+  }
+}

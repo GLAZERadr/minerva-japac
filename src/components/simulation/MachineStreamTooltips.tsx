@@ -19,8 +19,13 @@ type MachineStreamTooltipsProps = {
   machineObjects: Map<string, any>;
   containerWidth: number;
   containerHeight: number;
+  /** Canvas container: tooltips are position:fixed, so add its page offset. */
+  containerEl?: HTMLElement | null;
   showAll?: boolean;
 };
+
+// Keep tooltips below the status legend strip at the top of the viewport.
+const MIN_ANCHOR_Y = 150;
 
 // Mapping eksplisit dari InfluxDB machine name ke 3D model ID
 const mapInfluxToModelId = (influxName: string): string[] => {
@@ -122,6 +127,7 @@ export default function MachineStreamTooltips({
   containerWidth,
   containerHeight,
   showAll = false,
+  containerEl,
 }: MachineStreamTooltipsProps) {
   const { readings } = useSensorStream({ limit: 32 });
   const [machinePositions, setMachinePositions] = useState<MachinePosition[]>(
@@ -129,19 +135,32 @@ export default function MachineStreamTooltips({
   );
   const rafRef = useRef<number | null>(null);
 
-  const latestMachine = useMemo(() => {
+  const newestMachine = useMemo(() => {
     if (readings.length === 0) return null;
-
-    // Cari reading dengan timestamp terbaru
+    // Reading with the newest timestamp
     let latest = readings[0];
     for (const reading of readings) {
       if (reading.time > latest.time) {
         latest = reading;
       }
     }
-
     return latest.machineName;
   }, [readings]);
+
+  // Hold each machine on screen for a few seconds so the tooltip doesn't
+  // jump across the scene on every reading.
+  const HOLD_MS = 6000;
+  const [latestMachine, setLatestMachine] = useState<string | null>(null);
+  const shownAtRef = useRef(0);
+  useEffect(() => {
+    if (!newestMachine || newestMachine === latestMachine) return;
+    const wait = Math.max(0, shownAtRef.current + HOLD_MS - Date.now());
+    const timer = window.setTimeout(() => {
+      shownAtRef.current = Date.now();
+      setLatestMachine(newestMachine);
+    }, wait);
+    return () => window.clearTimeout(timer);
+  }, [latestMachine, newestMachine]);
 
   useEffect(() => {
     if (!camera || machineObjects.size === 0 || (!latestMachine && !showAll)) {
@@ -264,6 +283,8 @@ export default function MachineStreamTooltips({
     showAll,
   ]);
 
+  const offset = containerEl?.getBoundingClientRect();
+
   return (
     <>
       {machinePositions.map((pos) => {
@@ -288,7 +309,10 @@ export default function MachineStreamTooltips({
             key={machineName}
             machineName={machineName}
             readings={readingsForTooltip}
-            screenPosition={{ x: pos.screenX, y: pos.screenY }}
+            screenPosition={{
+              x: pos.screenX + (offset?.left ?? 0),
+              y: Math.max(pos.screenY, MIN_ANCHOR_Y) + (offset?.top ?? 0),
+            }}
           />
         );
       })}

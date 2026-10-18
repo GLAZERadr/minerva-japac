@@ -1,17 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Bell, Database, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity, Database, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LiveSensorTicker from "@/components/LiveSensorTicker";
 import ProductDataViewerModal from "@/components/ProductDataViewerModal";
-import { formatTimestamp, useNotifications } from "./useNotifications";
-
-const severityDot: Record<string, string> = {
-  critical: "bg-[#f28b82]",
-  warning: "bg-[#fdd663]",
-  info: "bg-[#8ab4f8]",
-};
+import { loadMachines } from "@/lib/machines";
+import { computePlantOee, healthTone, HEALTH_TEXT } from "@/lib/machine-display";
+import { cn } from "@/lib/utils";
 
 export function openAskAi(question?: string) {
   try {
@@ -29,39 +25,55 @@ export function openModelModal(machineId: string) {
   }
 }
 
-export default function FactoryTopBar({ leftOffset }: { leftOffset: number }) {
-  const { notifications, unreadCount, markAllRead, markRead } = useNotifications();
-  const [bellOpen, setBellOpen] = useState(false);
-  const [productOpen, setProductOpen] = useState(false);
-  const bellRef = useRef<HTMLDivElement | null>(null);
-
+/** Factory Health (OEE) chip — availability × performance × quality. */
+function OeeChip() {
+  const [oee, setOee] = useState<ReturnType<typeof computePlantOee>>(null);
   useEffect(() => {
-    const onDown = (event: PointerEvent) => {
-      if (bellRef.current?.contains(event.target as Node)) return;
-      setBellOpen(false);
+    let alive = true;
+    loadMachines()
+      .then((machines) => alive && setOee(computePlantOee(machines)))
+      .catch(() => alive && setOee(null));
+    return () => {
+      alive = false;
     };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
   }, []);
+  if (!oee) return null;
+  return (
+    <span
+      title={`Factory health (OEE) ${oee.oee}% — availability ${oee.availability}%, performance ${oee.performance}%, quality ${oee.quality}%`}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[rgba(232,234,237,0.08)] px-2.5 py-1 text-xs text-[#bdc1c6]"
+    >
+      <Activity className="h-3.5 w-3.5 text-[#9aa0a6]" />
+      <span className="hidden xl:inline">Factory health</span>
+      <span className="xl:hidden">OEE</span>
+      <span className={cn("font-medium tabular-nums", HEALTH_TEXT[healthTone(oee.oee)])}>{oee.oee}%</span>
+    </span>
+  );
+}
+
+export default function FactoryTopBar() {
+  // Notifications live in the right rail (desktop) and the Alerts tab
+  // (mobile); a second bell here used to clip under the rail.
+  const [productOpen, setProductOpen] = useState(false);
 
   return (
     <>
       <header
-        className="fixed top-0 right-0 z-40 flex h-14 items-center gap-4 border-b border-[#333333] bg-[#181818] px-4 transition-all duration-300"
-        style={{ left: leftOffset }}
+        className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center gap-2 border-b border-[#333333] bg-[#181818] px-3 transition-all duration-300 sm:gap-3 md:left-[var(--rail-left)] md:px-4"
       >
         <div className="flex shrink-0 items-center gap-2.5">
           <img src="/minerva-logo.png" alt="Minerva" className="h-7 w-auto" />
           <span className="hidden rounded-md bg-[rgba(232,234,237,0.08)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#9aa0a6] xl:inline-block">
-            Nama Pabrik
+            Plant
           </span>
-          <span className="rounded-md bg-[rgba(138,180,248,0.15)] px-2.5 py-1 text-xs font-medium text-[#8ab4f8]">
+          <span className="hidden rounded-md bg-[rgba(138,180,248,0.15)] px-2.5 py-1 text-xs font-medium text-[#8ab4f8] sm:inline-block">
             Smelter
           </span>
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <LiveSensorTicker />
+          <OeeChip />
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -75,72 +87,12 @@ export default function FactoryTopBar({ leftOffset }: { leftOffset: number }) {
           </Button>
           <Button
             size="sm"
-            className="hidden gap-1.5 rounded-md bg-[#2d2d2d] font-medium text-[#e8eaed] hover:bg-[#3d3d3d] hover:text-white sm:inline-flex"
+            className="hidden gap-1.5 rounded-md bg-[#2d2d2d] font-medium text-[#e8eaed] hover:bg-[#3d3d3d] hover:text-white md:inline-flex"
             onClick={() => setProductOpen(true)}
           >
             <Database className="h-3.5 w-3.5" />
-            Data Produk
+            Product Data
           </Button>
-          <div ref={bellRef} className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="text-[#acacbe] hover:bg-[rgba(232,234,237,0.08)] hover:text-[#e8eaed]"
-              onClick={() => {
-                setBellOpen((prev) => {
-                  if (!prev) markAllRead();
-                  return !prev;
-                });
-              }}
-            >
-              <span className="relative inline-flex">
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-[#f28b82]" />
-                )}
-              </span>
-            </Button>
-            {bellOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-lg border border-[#3c4043] bg-[#202124] p-3 shadow-2xl">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#e8eaed]">Notifications</span>
-                  <span className="text-xs text-[#9aa0a6]">{unreadCount} unread</span>
-                </div>
-                <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
-                  {notifications.length ? (
-                    notifications.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          if (item.machineId) openModelModal(item.machineId);
-                          markRead(item.id);
-                          setBellOpen(false);
-                        }}
-                        className="flex w-full flex-col gap-1 rounded-md border border-transparent px-3 py-2 text-left transition hover:border-[rgba(138,180,248,0.4)] hover:bg-[#2a2a2a]"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2 font-medium text-[#e8eaed]">
-                            <span className={`h-2.5 w-2.5 rounded-full ${severityDot[item.severity]}`} />
-                            <span>{item.title}</span>
-                          </div>
-                          <span className="text-right text-[11px] text-[#9aa0a6]">
-                            {formatTimestamp(item.timestamp)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#bdc1c6]">{item.message}</p>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="rounded-md border border-dashed border-[#3c4043] px-3 py-6 text-center text-sm text-[#9aa0a6]">
-                      No notifications
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </header>
       <ProductDataViewerModal isOpen={productOpen} onCloseAction={() => setProductOpen(false)} />
