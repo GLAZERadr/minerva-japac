@@ -14,6 +14,15 @@
     "trailingSlash": false,
     "headers": [
       {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(js|css)",
         "headers": [
           {
@@ -28,6 +37,15 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "/env.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store"
           }
         ]
       }

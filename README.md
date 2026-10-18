@@ -6,7 +6,7 @@ maintenance needs, simulates process changes before they reach the floor,
 and answers questions about the plant through an AI assistant built on
 Gemma 4.
 
-**Live:** Cloud Run (`asia-southeast2`) · Firebase Hosting: https://minerva-apac.web.app
+**Live:** https://minerva-apac.web.app (Firebase Hosting)
 
 ---
 
@@ -32,7 +32,7 @@ flowchart LR
   end
 
   subgraph Google["Firebase · Google Cloud"]
-    Hosting["Cloud Run · nginx<br/>Next.js / React dashboard"]
+    Hosting["Firebase Hosting<br/>Next.js / React dashboard"]
     FS[("Cloud Firestore<br/>lots · alerts")]
     Auth["Firebase Auth<br/>anonymous"]
     AIS["Google AI Studio<br/>Gemma 4"]
@@ -55,7 +55,7 @@ flowchart LR
 | Component | Technology | Status |
 | --- | --- | --- |
 | Dashboard | Next.js 15 (React 19), static export | ✅ In use |
-| Hosting | Cloud Run (`asia-southeast2`, nginx container); Firebase Hosting also supported | ✅ In use |
+| Hosting | Firebase Hosting (`minerva-apac`, Spark plan); Cloud Run container also provided | ✅ In use |
 | App data (lots, alerts) | Cloud Firestore + anonymous Firebase Auth | ✅ In use, once configured (see [Cloud Firestore](#cloud-firestore)) |
 | AI assistant | Google AI Studio, `gemma-4-31b-it` with function calling | ✅ In use |
 | Telemetry API | Go service (InfluxDB stream, chatbot, MySQL products) | ✅ In use, hosted separately |
@@ -91,11 +91,12 @@ Create `.env.local` in the project root. Every variable is optional.
 
 Values are resolved in two places ([`src/lib/public-env.ts`](src/lib/public-env.ts)):
 
-- **At runtime:** on Cloud Run, the container writes `/env.js` from the
-  service's `NEXT_PUBLIC_*` environment variables at startup. Change them in
-  the Cloud Run console; no rebuild is needed and no key lives in git.
-- **At build time:** anywhere else (local dev, Firebase Hosting), the values
-  in `.env.local` are baked in when you run `npm run build`.
+- **At build time** (local dev, Firebase Hosting): the values in `.env.local`
+  are baked in when you run `npm run build`, so build on a machine that has a
+  filled-in `.env.local` before deploying.
+- **At runtime** (Cloud Run only): the container writes `/env.js` from the
+  service's `NEXT_PUBLIC_*` environment variables at startup, which override
+  the build-time values without a rebuild.
 
 > **Note:** `NEXT_PUBLIC_GEMINI_API_KEY` is visible in the browser. Restrict
 > the key to the site's HTTP referrers in Google AI Studio, and move the calls
@@ -132,13 +133,17 @@ timestamp), and makes alerts read-only for the app.
 
 ### One-time setup (project `minerva-apac`)
 
-1. In the Firebase console, go to **Build → Firestore Database** and create the database.
-2. Under **Authentication → Sign-in method**, enable **Anonymous**.
+1. In the Firebase console, open **Databases & Storage → Firestore Database**
+   and create the database (Standard edition, location `asia-southeast2`,
+   production mode).
+2. Open **Security → Authentication**, click **Get started**, and enable
+   **Anonymous** under **Sign-in method**.
 3. Register a web app and copy its config into `.env.local`:
    ```bash
    npx firebase-tools apps:sdkconfig WEB <APP_ID> --project minerva-apac
    ```
-4. Deploy the security rules:
+4. Deploy the security rules. The Firebase CLI must be signed in with an
+   account that has access to the project (`npx firebase-tools login`):
    ```bash
    npm run deploy:rules
    ```
@@ -170,38 +175,43 @@ NEXT_PUBLIC_FIREBASE_EMULATOR=1 NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-minerva NEX
 
 ## Deployment
 
-### Cloud Run (recommended)
+### Firebase Hosting (current)
+
+The live site is a static export on Firebase Hosting (free on the Spark
+plan). Configuration is baked in at build time, so make sure `.env.local` is
+filled in (see [Configuration](#configuration)), then:
+
+```bash
+npm run deploy:hosting
+```
+
+This runs the typecheck and build, then uploads `out/` with
+`FIREBASE_HOSTING_UPLOAD_CONCURRENCY=4`. Fewer parallel uploads keep the
+larger 3D models (up to 15 MB) from timing out on slower connections. Stop
+`npm run dev` before building, since both write to `.next/`.
+
+After the first deploy, add `minerva-apac.web.app` (and
+`minerva-apac.firebaseapp.com`) to the Gemini key's allowed HTTP referrers in
+Google AI Studio.
+
+### Cloud Run (optional, requires billing)
 
 The [`Dockerfile`](Dockerfile) builds the static export and serves it with
-nginx on port 8080 (clean URLs, long-lived caching for hashed bundles).
-[`docker/write-env.sh`](docker/write-env.sh) writes `/env.js` from the
-service's environment at startup.
+nginx on port 8080. [`docker/write-env.sh`](docker/write-env.sh) writes
+`/env.js` from the service's environment at startup, so keys can be set in
+the Cloud Run console instead of at build time. Cloud Run needs a billing
+account on the project.
 
-**Continuous deployment from GitHub (console):**
+1. In Cloud Run, choose **Create service → Continuously deploy from a
+   repository**, connect this GitHub repository, branch `^main$`, build type
+   **Dockerfile**.
+2. Region `asia-southeast2`, allow unauthenticated access.
+3. Under **Containers → Variables**, add the `NEXT_PUBLIC_*` values.
 
-1. Open Cloud Run in project `minerva-apac` and choose **Create service →
-   Continuously deploy from a repository**.
-2. Connect GitHub, pick this repository, branch `^main$`, build type
-   **Dockerfile** (path `/Dockerfile`).
-3. Set the region to `asia-southeast2` and allow unauthenticated access.
-4. Under **Containers → Variables**, add the `NEXT_PUBLIC_*` values from
-   [Configuration](#configuration).
-5. Create the service. Every push to `main` now rebuilds and redeploys.
-
-After the first deploy, add the `*.run.app` URL to the Gemini key's allowed
-HTTP referrers in Google AI Studio.
-
-**From a terminal** (with the gcloud CLI installed and signed in):
+Or, with the gcloud CLI:
 
 ```bash
 gcloud run deploy minerva --source . --region asia-southeast2 --project minerva-apac --allow-unauthenticated
-```
-
-### Firebase Hosting
-
-```bash
-npm run check                                        # typecheck + static build into out/
-npx firebase-tools deploy --only hosting --project minerva-apac
 ```
 
 ## Scripts
@@ -214,11 +224,12 @@ npx firebase-tools deploy --only hosting --project minerva-apac
 | `npm run emulators` | Firebase Auth and Firestore emulators. |
 | `npm run seed:firestore` | Seed Firestore with demo lots and alerts (`-- --reset` to clear first). |
 | `npm run deploy:rules` | Deploy Firestore rules and indexes. |
+| `npm run deploy:hosting` | Build and deploy the site to Firebase Hosting. |
 
 ## Project structure
 
 ```
-Dockerfile                Cloud Run image (static build + nginx)
+Dockerfile                Optional Cloud Run image (static build + nginx)
 docker/                   nginx config template, env.js writer
 src/
   app/                    Routes: / (dashboard), /compro, /twin, /geogemma
@@ -254,7 +265,7 @@ firestore.rules
 
 ## Demo checklist
 
-Before recording, confirm on the deployed URL:
+Before recording, confirm on https://minerva-apac.web.app:
 
 - [ ] The top bar shows sensor values within 5 seconds.
 - [ ] Product Data lists at least 3 lots.

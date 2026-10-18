@@ -10,7 +10,8 @@
     "check": "npm run typecheck && npm run build",
     "emulators": "firebase emulators:start --only auth,firestore",
     "seed:firestore": "node scripts/seed-firestore.mjs",
-    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:hosting": "npm run check && FIREBASE_HOSTING_UPLOAD_CONCURRENCY=4 firebase deploy --only hosting"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
