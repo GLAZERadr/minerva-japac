@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { publicEnv } from "@/lib/public-env";
 
 // Firebase Web App configuration for project: minerva-apac
 // Values are read from NEXT_PUBLIC_FIREBASE_* env vars so secrets are not
@@ -7,13 +8,13 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 //
 // After login + app registration, copy the output into `.env.local`.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "minerva-apac",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "",
+  apiKey: publicEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
+  authDomain: publicEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
+  projectId: publicEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID") || "minerva-apac",
+  storageBucket: publicEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: publicEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: publicEnv("NEXT_PUBLIC_FIREBASE_APP_ID"),
+  measurementId: publicEnv("NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID"),
 };
 
 function getFirebaseApp(): FirebaseApp | null {

@@ -22,6 +22,7 @@ import {
   type FunctionDeclaration,
   type GenerateContentConfig,
 } from "@google/genai";
+import { publicEnv } from "@/lib/public-env";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -43,13 +44,13 @@ const toSdkThinkingLevel = (level: ThinkingLevelOption) =>
   level === "high" ? ThinkingLevel.HIGH : ThinkingLevel.MINIMAL;
 
 export function isGeminiConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim());
+  return Boolean(publicEnv("NEXT_PUBLIC_GEMINI_API_KEY"));
 }
 
 let cachedClient: GoogleGenAI | null = null;
 
 export function getGeminiClient(): GoogleGenAI {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
+  const apiKey = publicEnv("NEXT_PUBLIC_GEMINI_API_KEY");
   if (!apiKey) {
     throw new Error(
       "NEXT_PUBLIC_GEMINI_API_KEY is not set. Create a key in Google AI Studio (aistudio.google.com) and add it to .env.local."

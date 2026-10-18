@@ -3,6 +3,7 @@
 import { connectAuthEmulator, getAuth, signInAnonymously } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
 import { firebaseApp } from "@/lib/firebase";
+import { publicEnv } from "@/lib/public-env";
 
 // Cloud Firestore for app data (product lots, alerts). The dashboard has no
 // login, so each browser signs in anonymously; the security rules only let
@@ -11,7 +12,7 @@ import { firebaseApp } from "@/lib/firebase";
 // Set NEXT_PUBLIC_FIREBASE_EMULATOR=1 to use the local emulators started by
 // `firebase emulators:start` (Firestore :8080, Auth :9099).
 
-const useEmulator = process.env.NEXT_PUBLIC_FIREBASE_EMULATOR === "1";
+const useEmulator = publicEnv("NEXT_PUBLIC_FIREBASE_EMULATOR") === "1";
 const READY_TIMEOUT_MS = 6000;
 
 let ready: Promise<Firestore | null> | null = null;

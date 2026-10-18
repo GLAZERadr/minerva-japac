@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api";
+import { publicEnv } from "@/lib/public-env";
 
 // Backend reachability + data-source selection for every feature that talks
 // to the Go API (sensor stream, products, Ask AI, notifications).
@@ -16,7 +17,7 @@ export type DataMode = "auto" | "mock" | "live";
 export type BackendStatus = "checking" | "online" | "offline";
 export type DataSource = "live" | "mock";
 
-const rawMode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "").trim().toLowerCase();
+const rawMode = publicEnv("NEXT_PUBLIC_DATA_MODE").toLowerCase();
 export const DATA_MODE: DataMode =
   rawMode === "mock" || rawMode === "live" ? rawMode : "auto";
 

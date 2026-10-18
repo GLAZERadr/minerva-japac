@@ -1,4 +1,6 @@
-const BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+import { publicEnv } from "@/lib/public-env";
+
+const BASE = publicEnv("NEXT_PUBLIC_API_BASE_URL");
 
 const normalizeBase = (value: string) => {
   if (!value) return "";
